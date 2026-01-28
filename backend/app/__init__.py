@@ -53,6 +53,7 @@ def create_app():
     extra_origins = [
         "http://localhost:3001",
         "http://localhost",
+        "https://localhost",
         "capacitor://localhost",
         "ionic://localhost",
     ]
