@@ -4,7 +4,7 @@ import { fetchMe } from "../../controllers/authController";
 import { fetchVentas } from "../../controllers/ventaController";
 import { uploadMicroempresaQr } from "../../controllers/userController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 // PDF
 import jsPDF from "jspdf";

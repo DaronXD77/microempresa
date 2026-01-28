@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 

@@ -4,7 +4,7 @@ import SectionCard from "../SectionCard";
 import { fetchFollowedMicroempresas, followMicroempresa, unfollowMicroempresa } from "../../controllers/clienteController";
 import { fetchPublicMicroempresas } from "../../controllers/publicController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 const ClienteMicroempresas = () => {
   const [microempresas, setMicroempresas] = useState([]);

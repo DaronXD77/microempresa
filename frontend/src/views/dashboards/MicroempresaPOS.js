@@ -5,7 +5,7 @@ import { crearVentaPos, subirComprobante } from "../../controllers/ventaControll
 import { fetchMe } from "../../controllers/authController";
 import { fetchClientes } from "../../controllers/clienteController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 const emptyCliente = {
   nombre: "",

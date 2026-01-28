@@ -13,7 +13,7 @@ import {
 import { fetchCategoriasActivas } from "../../controllers/categoriaController";
 import { fetchProveedores } from "../../controllers/proveedorController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 const emptyForm = {
   nombre: "",

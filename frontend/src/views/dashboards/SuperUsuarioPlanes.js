@@ -9,7 +9,7 @@ import {
   uploadSystemQrAdmin,
 } from "../../controllers/subscriptionController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 export default function SuperUsuarioPlanes() {
   const navigate = useNavigate();
