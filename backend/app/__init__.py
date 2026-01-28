@@ -50,8 +50,15 @@ def create_app():
     # CORS (para cookies de sesión)
     frontend_origin = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
     origins = [o.strip() for o in frontend_origin.split(",") if o.strip()]
-    if "http://localhost:3001" not in origins:
-        origins.append("http://localhost:3001")
+    extra_origins = [
+        "http://localhost:3001",
+        "http://localhost",
+        "capacitor://localhost",
+        "ionic://localhost",
+    ]
+    for origin in extra_origins:
+        if origin not in origins:
+            origins.append(origin)
     CORS(app, supports_credentials=True, origins=origins)
 
     # Uploads
