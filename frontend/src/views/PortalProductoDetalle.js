@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { fetchPublicProductoDetalle } from "../controllers/productoController";
 import { addToCart, getCart } from "../utils/cartStorage";
 import ToastModal from "./ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const PortalProductoDetalle = () => {
   const { productoId } = useParams();
@@ -41,8 +42,8 @@ const PortalProductoDetalle = () => {
 
   const images = useMemo(() => {
     const fotos = producto?.fotos || [];
-    if (fotos.length > 0) return fotos.map((foto) => foto.url).filter(Boolean);
-    if (producto?.microempresa?.logo_url) return [producto.microempresa.logo_url];
+    if (fotos.length > 0) return fotos.map((foto) => resolveAssetUrl(foto.url)).filter(Boolean);
+    if (producto?.microempresa?.logo_url) return [resolveAssetUrl(producto.microempresa.logo_url)];
     return [];
   }, [producto]);
 
@@ -178,7 +179,10 @@ const PortalProductoDetalle = () => {
                     className="detail-brand"
                   >
                     {producto.microempresa.logo_url && (
-                      <img src={producto.microempresa.logo_url} alt={producto.microempresa.nombre} />
+                      <img
+                        src={resolveAssetUrl(producto.microempresa.logo_url)}
+                        alt={producto.microempresa.nombre}
+                      />
                     )}
                     <span>{producto.microempresa.nombre}</span>
                   </Link>

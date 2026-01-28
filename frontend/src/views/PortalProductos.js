@@ -11,6 +11,7 @@ import {
 import { getCart } from "../utils/cartStorage";
 import { addToCart } from "../utils/cartStorage";
 import ToastModal from "./ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const PortalProductos = () => {
   const { tenantId } = useParams();
@@ -246,7 +247,7 @@ const PortalProductos = () => {
             <div className="microempresa-info">
               <div className="microempresa-logo">
                 {selectedMicro.logo_url ? (
-                  <img src={selectedMicro.logo_url} alt={selectedMicro.nombre} />
+                  <img src={resolveAssetUrl(selectedMicro.logo_url)} alt={selectedMicro.nombre} />
                 ) : (
                   <span>{String(selectedMicro.nombre || "?").slice(0, 2).toUpperCase()}</span>
                 )}
@@ -350,7 +351,9 @@ const PortalProductos = () => {
 
           <main className="portal-grid">
             {visibleProductos.map((producto) => {
-              const imageUrl = producto.fotos?.[0]?.url || producto.microempresa?.logo_url;
+              const imageUrl = resolveAssetUrl(
+                producto.fotos?.[0]?.url || producto.microempresa?.logo_url
+              );
               const detailPath = `${detailBase}/${producto.id_producto}`;
 
               return (
@@ -365,10 +368,13 @@ const PortalProductos = () => {
                     </div>
                     <div className="product-name">{String(producto.nombre || "").toUpperCase()}</div>
                     <div className="product-price">Bs {producto.precio_unitario}</div>
-                    {producto.microempresa?.nombre && (
-                      <div className="product-brand">
+                      {producto.microempresa?.nombre && (
+                        <div className="product-brand">
                         {producto.microempresa.logo_url && (
-                          <img src={producto.microempresa.logo_url} alt={producto.microempresa.nombre} />
+                          <img
+                            src={resolveAssetUrl(producto.microempresa.logo_url)}
+                            alt={producto.microempresa.nombre}
+                          />
                         )}
                         <span>{producto.microempresa.nombre}</span>
                       </div>
