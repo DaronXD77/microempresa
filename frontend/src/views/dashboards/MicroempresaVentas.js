@@ -20,6 +20,7 @@ const MicroempresaVentas = () => {
   const [message, setMessage] = useState("");
   const [selectedVenta, setSelectedVenta] = useState(null);
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
+  const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
   const [qrUploading, setQrUploading] = useState(false);
 
   //  NUEVO: mes seleccionado
@@ -421,9 +422,26 @@ const MicroempresaVentas = () => {
           <div className="ventas-qr">
             <div className="form-title">QR de pagos</div>
             {micro?.qr_url ? (
-              <img src={resolveAssetUrl(micro.qr_url)} alt="QR de pagos" />
+              <img
+                src={resolveAssetUrl(micro.qr_url)}
+                alt="QR de pagos"
+                style={{ width: 180, height: 180, objectFit: "contain", cursor: "zoom-in", borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff" }}
+                onClick={() => setQrPreviewOpen(true)}
+              />
             ) : (
               <div className="muted">Sin QR cargado</div>
+            )}
+
+            {qrPreviewOpen && micro?.qr_url && (
+              <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
+                <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+                  <div className="image-modal-title">QR de pagos</div>
+                  <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)}>
+                    Cerrar
+                  </button>
+                  <img src={resolveAssetUrl(micro.qr_url)} alt="QR de pagos" />
+                </div>
+              </div>
             )}
             <label className="upload-button">
               <span>{qrUploading ? "Subiendo..." : "Subir QR"}</span>

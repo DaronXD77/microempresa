@@ -811,6 +811,9 @@ export default function MicroempresaSignupWizard() {
           <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
             <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="image-modal-title">QR de pago</div>
+              <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)}>
+                Cerrar
+              </button>
               <img src={resolveAssetUrl(systemQrUrl)} alt="QR de pago" />
             </div>
           </div>

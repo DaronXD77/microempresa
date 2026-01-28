@@ -66,6 +66,7 @@ const DashboardLayout = ({
   themeClass,
 }) => {
   const location = useLocation();
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
 
   /**
    * Título dinámico basado en la ruta actual.
@@ -80,8 +81,16 @@ const DashboardLayout = ({
    */
   const switchRoles = availableRoles.filter((role) => role !== currentRole);
 
+  const closeMobileNav = () => {
+    if (!isMobile) return;
+    setSidebarCollapsed(true);
+  };
+
   return (
     <div className={`app-shell ${!sidebarCollapsed ? "nav-open" : ""} ${themeClass || ""}`.trim()}>
+      {!sidebarCollapsed && isMobile && (
+        <button type="button" className="nav-backdrop" aria-label="Cerrar menu" onClick={closeMobileNav} />
+      )}
       <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`.trim()}>
         <div className="sidebar-top">
           <div className="brand">
@@ -104,6 +113,7 @@ const DashboardLayout = ({
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={closeMobileNav}
               className={({ isActive }) =>
                 `menu-item${isActive ? " active" : ""}`
               }

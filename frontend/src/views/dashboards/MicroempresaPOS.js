@@ -608,6 +608,16 @@ const MicroempresaPOS = () => {
         >
           <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="image-modal-title">{previewTitle}</div>
+            <button
+              type="button"
+              className="image-modal-close"
+              onClick={() => {
+                setPreviewImage(null);
+                setPreviewTitle("");
+              }}
+            >
+              Cerrar
+            </button>
             <img src={previewImage} alt={previewTitle} />
           </div>
         </div>

@@ -25,7 +25,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 20px;
+  padding: calc(32px + env(safe-area-inset-top)) 20px;
   background: radial-gradient(circle at top left, #fef3c7 0%, #f7f7fb 35%, #e0e7ff 100%);
   position: relative;
   overflow: hidden;
@@ -1386,7 +1386,7 @@ select {
 .portal-page {
   background: radial-gradient(circle at top, #f7f7f4 0%, #efefec 50%, #f7f7f4 100%);
   min-height: 100vh;
-  padding: 32px 0 64px;
+  padding: calc(32px + env(safe-area-inset-top)) 0 64px;
 }
 
 .portal-container {
@@ -1509,11 +1509,27 @@ select {
   }
 
   .app-shell.nav-open::before {
-    content: "";
+    content: none;
+  }
+
+  .nav-backdrop {
     position: fixed;
-    inset: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: calc(56px + env(safe-area-inset-top));
     background: rgba(15, 23, 42, 0.55);
+    border-radius: 0;
+    color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
     z-index: 900;
+    cursor: pointer;
+  }
+
+  .nav-backdrop:hover {
+    background: rgba(15, 23, 42, 0.55);
   }
 
   .menu {
@@ -1534,7 +1550,7 @@ select {
     top: 0;
     z-index: 50;
     background: #f7f7fb;
-    padding: 10px 0;
+    padding: calc(10px + env(safe-area-inset-top)) 0 10px;
   }
 
   .topbar-left {
@@ -1642,7 +1658,26 @@ select {
 
   .portal-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 12px;
+  }
+
+  .product-card {
+    gap: 8px;
+    padding-bottom: 12px;
+  }
+
+  .product-image {
+    border-radius: 14px;
+    aspect-ratio: 4 / 5;
+  }
+
+  .product-name {
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+
+  .product-price {
+    font-size: 13px;
   }
 
   .product-detail-grid {
@@ -1692,7 +1727,7 @@ select {
   }
 
   .auth-page {
-    padding: 20px 14px;
+    padding: calc(20px + env(safe-area-inset-top)) 14px;
   }
 
   .auth-title {
@@ -1711,6 +1746,10 @@ select {
 
   .portal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .product-image {
+    aspect-ratio: 1 / 1;
   }
 
   .portal-icon,
@@ -2448,6 +2487,19 @@ select {
   height: auto;
   border-radius: 12px;
   object-fit: contain;
+}
+
+.image-modal-close {
+  justify-self: end;
+  background: transparent;
+  border: 1px solid #d0d7de;
+  color: #111827;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.image-modal-close:hover {
+  background: #f3f4f6;
 }
 
 .pos-cart {
