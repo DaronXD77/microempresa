@@ -8,6 +8,11 @@ const isMobileLike = () => {
 export const openPdf = (doc, filename) => {
   try {
     if (isMobileLike()) {
+      const dataUrl = doc.output("dataurlstring");
+      if (dataUrl) {
+        window.location.href = dataUrl;
+        return;
+      }
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       window.location.href = url;

@@ -4,17 +4,20 @@ import SectionCard from "../SectionCard";
 import ToastModal from "../ToastModal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
+
+const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
 
 async function apiGet(path) {
-  const res = await fetch(path, { method: "GET", credentials: "include" });
+  const res = await fetch(`${API_BASE}${path}`, { method: "GET", credentials: "include" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Error");
   return data;
 }
 
 async function apiPost(path, body) {
-  const res = await fetch(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -26,7 +29,7 @@ async function apiPost(path, body) {
 }
 
 async function apiPut(path, body) {
-  const res = await fetch(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -38,7 +41,7 @@ async function apiPut(path, body) {
 }
 
 async function apiPatch(path) {
-  const res = await fetch(path, { method: "PATCH", credentials: "include" });
+  const res = await fetch(`${API_BASE}${path}`, { method: "PATCH", credentials: "include" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Error");
   return data;
@@ -223,6 +226,12 @@ export default function MicroempresaClientes() {
 
   const downloadReport = (cliente) => {
     const html = buildReportHtml(cliente);
+    const isMobile = typeof window !== "undefined" && (/android|iphone|ipad|ipod/i.test(navigator.userAgent) || window.Capacitor);
+    if (isMobile) {
+      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+      window.location.href = dataUrl;
+      return;
+    }
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -499,7 +508,7 @@ export default function MicroempresaClientes() {
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_clientes_${stamp}.pdf`);
+      openPdf(doc, `informe_clientes_${stamp}.pdf`);
 
       setToast({ open: true, message: "Informe PDF generado.", variant: "success" });
     } catch (e) {
