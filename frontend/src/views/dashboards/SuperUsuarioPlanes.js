@@ -9,6 +9,7 @@ import {
   uploadSystemQrAdmin,
 } from "../../controllers/subscriptionController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 export default function SuperUsuarioPlanes() {
   const navigate = useNavigate();
@@ -179,7 +180,7 @@ export default function SuperUsuarioPlanes() {
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
           {systemQrUrl ? (
             <img
-              src={systemQrUrl}
+              src={resolveAssetUrl(systemQrUrl)}
               alt="QR del sistema"
               style={{ width: 140, height: 140, objectFit: "contain", borderRadius: 12, border: "1px solid #e5e7eb", cursor: "zoom-in" }}
               onClick={() => setQrPreviewOpen(true)}
@@ -204,7 +205,7 @@ export default function SuperUsuarioPlanes() {
           <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
             <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="image-modal-title">QR del sistema</div>
-              <img src={systemQrUrl} alt="QR del sistema" />
+              <img src={resolveAssetUrl(systemQrUrl)} alt="QR del sistema" />
             </div>
           </div>
         )}

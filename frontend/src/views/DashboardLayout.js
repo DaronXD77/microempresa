@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { resolveAssetUrl } from "../utils/url";
 
 /**
  * =========================================================
@@ -127,7 +128,7 @@ const DashboardLayout = ({
               {avatarUrl ? (
                 <img
                   className="avatar-image"
-                  src={avatarUrl}
+                  src={resolveAssetUrl(avatarUrl)}
                   alt={displayName}
                 />
               ) : (

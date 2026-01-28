@@ -5,6 +5,7 @@ import { crearVentaPos, subirComprobante } from "../../controllers/ventaControll
 import { fetchMe } from "../../controllers/authController";
 import { fetchClientes } from "../../controllers/clienteController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const emptyCliente = {
   nombre: "",
@@ -100,7 +101,7 @@ const MicroempresaPOS = () => {
   }, [productos, search]);
 
   const resolveImageUrl = (producto) =>
-    producto?.fotos?.[0]?.url || producto?.microempresa?.logo_url || "";
+    resolveAssetUrl(producto?.fotos?.[0]?.url || producto?.microempresa?.logo_url || "");
 
   const addToCart = (producto) => {
     setCart((prev) => {
@@ -473,11 +474,11 @@ const MicroempresaPOS = () => {
               <div className="pos-qr-preview">
                 {micro?.qr_url ? (
                   <img
-                    src={micro.qr_url}
+                    src={resolveAssetUrl(micro.qr_url)}
                     alt="QR de pago"
                     role="button"
                     onClick={() => {
-                      setPreviewImage(micro.qr_url);
+                      setPreviewImage(resolveAssetUrl(micro.qr_url));
                       setPreviewTitle("QR de pago");
                     }}
                   />

@@ -13,6 +13,7 @@ import {
 import { fetchCategoriasActivas } from "../../controllers/categoriaController";
 import { fetchProveedores } from "../../controllers/proveedorController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const emptyForm = {
   nombre: "",
@@ -550,9 +551,9 @@ const MicroempresaProductos = () => {
                     <div className="producto-table-cell">
                       {fotoPreview.length > 0 ? (
                         <div className="producto-table-thumbs">
-                          {fotoPreview.map((foto) => (
-                            <img key={foto.id_foto} src={foto.url} alt={producto.nombre} />
-                          ))}
+                            {fotoPreview.map((foto) => (
+                              <img key={foto.id_foto} src={resolveAssetUrl(foto.url)} alt={producto.nombre} />
+                            ))}
                           {extraFotos > 0 && <span className="producto-table-thumb-count">+{extraFotos}</span>}
                         </div>
                       ) : (
@@ -713,14 +714,14 @@ const MicroempresaProductos = () => {
                         <div className="producto-table-fotos">
                           <div className="form-title">Fotos</div>
                           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-                            {(producto.fotos || []).map((foto) => (
-                              <div key={foto.id_foto} className="producto-foto-chip">
-                                <img src={foto.url} alt={producto.nombre} />
-                                <button type="button" onClick={() => handleDeleteFoto(producto.id_producto, foto.id_foto)}>
-                                  Quitar
-                                </button>
-                              </div>
-                            ))}
+                              {(producto.fotos || []).map((foto) => (
+                                <div key={foto.id_foto} className="producto-foto-chip">
+                                  <img src={resolveAssetUrl(foto.url)} alt={producto.nombre} />
+                                  <button type="button" onClick={() => handleDeleteFoto(producto.id_producto, foto.id_foto)}>
+                                    Quitar
+                                  </button>
+                                </div>
+                              ))}
                             <label className="upload-button">
                               <span>Agregar foto</span>
                               <input

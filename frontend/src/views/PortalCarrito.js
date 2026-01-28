@@ -5,6 +5,7 @@ import { crearVentaVirtual, subirComprobante } from "../controllers/ventaControl
 import { fetchMe } from "../controllers/authController";
 import { lookupPublicCliente, registerPublicCliente } from "../controllers/clienteController";
 import ToastModal from "./ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const emptyCliente = {
   nombre: "",
@@ -490,7 +491,11 @@ const PortalCarrito = () => {
               {cart.items.map((item) => (
                 <div key={item.id_producto} className="cart-item">
                   <div className="cart-item-info">
-                    {item.foto_url ? <img src={item.foto_url} alt={item.nombre} /> : <div className="cart-photo" />}
+                    {item.foto_url ? (
+                      <img src={resolveAssetUrl(item.foto_url)} alt={item.nombre} />
+                    ) : (
+                      <div className="cart-photo" />
+                    )}
                     <div>
                       <strong>{item.nombre}</strong>
                       <div className="muted">Bs {item.precio_unitario}</div>
@@ -653,7 +658,7 @@ const PortalCarrito = () => {
               {cart.microempresa?.qr_url ? (
                 <div className="checkout-qr-preview">
                   <img
-                    src={cart.microempresa.qr_url}
+                    src={resolveAssetUrl(cart.microempresa.qr_url)}
                     alt="QR de pago"
                     onClick={() => setQrOpen(true)}
                     role="button"
@@ -687,7 +692,7 @@ const PortalCarrito = () => {
             <button type="button" className="qr-modal-close" onClick={() => setQrOpen(false)}>
               Cerrar
             </button>
-            <img src={cart.microempresa.qr_url} alt="QR de pago" />
+            <img src={resolveAssetUrl(cart.microempresa.qr_url)} alt="QR de pago" />
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { fetchMe } from "../../controllers/authController";
 import { fetchVentas } from "../../controllers/ventaController";
 import { uploadMicroempresaQr } from "../../controllers/userController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 // PDF
 import jsPDF from "jspdf";
@@ -419,7 +420,11 @@ const MicroempresaVentas = () => {
 
           <div className="ventas-qr">
             <div className="form-title">QR de pagos</div>
-            {micro?.qr_url ? <img src={micro.qr_url} alt="QR de pagos" /> : <div className="muted">Sin QR cargado</div>}
+            {micro?.qr_url ? (
+              <img src={resolveAssetUrl(micro.qr_url)} alt="QR de pagos" />
+            ) : (
+              <div className="muted">Sin QR cargado</div>
+            )}
             <label className="upload-button">
               <span>{qrUploading ? "Subiendo..." : "Subir QR"}</span>
               <input

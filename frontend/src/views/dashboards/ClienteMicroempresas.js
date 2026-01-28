@@ -4,6 +4,7 @@ import SectionCard from "../SectionCard";
 import { fetchFollowedMicroempresas, followMicroempresa, unfollowMicroempresa } from "../../controllers/clienteController";
 import { fetchPublicMicroempresas } from "../../controllers/publicController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const ClienteMicroempresas = () => {
   const [microempresas, setMicroempresas] = useState([]);
@@ -80,7 +81,7 @@ const ClienteMicroempresas = () => {
     <article key={micro.tenant_id} className="micro-card">
       <div className="micro-logo">
         {micro.logo_url ? (
-          <img src={micro.logo_url} alt={micro.nombre} />
+          <img src={resolveAssetUrl(micro.logo_url)} alt={micro.nombre} />
         ) : (
           <span>{String(micro.nombre || "?").slice(0, 2).toUpperCase()}</span>
         )}

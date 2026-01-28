@@ -6,6 +6,7 @@ import { fetchMe } from "../../controllers/authController";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { resolveAssetUrl } from "../utils/url";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -20,9 +21,7 @@ const formatSaldo = (value) => {
 // Resuelve rutas relativas a URL absoluta usando API_BASE
 const resolveUrl = (value) => {
   if (!value) return null;
-  if (value.startsWith("http")) return value;
-  if (value.startsWith("/")) return `${API_BASE}${value}`;
-  return `${API_BASE}/${value}`;
+  return resolveAssetUrl(value) || null;
 };
 
 const MicroempresaEconomia = () => {
@@ -286,7 +285,7 @@ const MicroempresaEconomia = () => {
                   <div>
                     {item.foto_url ? (
                       <img
-                        src={item.foto_url}
+                        src={resolveUrl(item.foto_url)}
                         alt={item.nombre}
                         style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8 }}
                       />

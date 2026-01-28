@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { resolveAssetUrl } from "../utils/url";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -129,9 +130,7 @@ const MicroempresaInventario = () => {
 
   const resolveUrl = (value) => {
     if (!value) return null;
-    if (value.startsWith("http")) return value;
-    if (value.startsWith("/")) return `${API_BASE}${value}`;
-    return `${API_BASE}/${value}`;
+    return resolveAssetUrl(value) || null;
   };
 
   const getMicroLogoUrl = () => {
@@ -368,7 +367,7 @@ const MicroempresaInventario = () => {
               const stockInicial = producto.stock_inicial ?? producto.stock;
               const stockActual = producto.stock ?? 0;
               const vendidas = Math.max(0, stockInicial - stockActual);
-              const fotoUrl = producto.fotos?.[0]?.url || "";
+              const fotoUrl = resolveAssetUrl(producto.fotos?.[0]?.url || "");
               const proveedor = producto.proveedor_id ? proveedorMap.get(String(producto.proveedor_id)) : null;
 
               return (

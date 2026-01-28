@@ -5,6 +5,7 @@ import { fetchProductos, createProducto, updateProducto } from "../../controller
 import { fetchProveedores, createProveedor } from "../../controllers/proveedorController";
 import { createCompra } from "../../controllers/compraController";
 import { fetchCategoriasActivas } from "../../controllers/categoriaController";
+import { resolveAssetUrl } from "../utils/url";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -503,7 +504,7 @@ const MicroempresaCompras = () => {
                 <div className="selected-product-media">
                   {selectedProducto.fotos?.[0]?.url ? (
                     <img
-                      src={selectedProducto.fotos[0].url}
+                      src={resolveAssetUrl(selectedProducto.fotos[0].url)}
                       alt={selectedProducto.nombre}
                       className="selected-product-image"
                     />

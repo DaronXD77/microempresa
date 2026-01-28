@@ -17,6 +17,7 @@ import {
   submitMicroempresaPayment,
 } from "../../controllers/subscriptionController";
 import ToastModal from "../ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const storage = {
   get: (k, fallback = "") => localStorage.getItem(k) || fallback,
@@ -754,7 +755,7 @@ export default function MicroempresaSignupWizard() {
                         <div className="qr-card">
                           {systemQrUrl ? (
                             <img
-                              src={systemQrUrl}
+                              src={resolveAssetUrl(systemQrUrl)}
                               alt="QR de pago"
                               className="qr-image"
                               onClick={() => setQrPreviewOpen(true)}
@@ -810,7 +811,7 @@ export default function MicroempresaSignupWizard() {
           <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
             <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="image-modal-title">QR de pago</div>
-              <img src={systemQrUrl} alt="QR de pago" />
+              <img src={resolveAssetUrl(systemQrUrl)} alt="QR de pago" />
             </div>
           </div>
         )}
