@@ -19,6 +19,7 @@ const SuperUsuarioCategorias = () => {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [editNombre, setEditNombre] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -128,6 +129,18 @@ const SuperUsuarioCategorias = () => {
           </button>
         </form>
 
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+          <input
+            placeholder="Buscar categoria"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ minWidth: 220 }}
+          />
+          <button type="button" className="ghost-button" onClick={load} disabled={loading}>
+            {loading ? "Cargando..." : "Recargar"}
+          </button>
+        </div>
+
         <ToastModal
           open={toast.open}
           message={toast.message}
@@ -140,7 +153,13 @@ const SuperUsuarioCategorias = () => {
           {categorias.length === 0 ? (
             <p className="muted">No hay categorias.</p>
           ) : (
-            categorias.map((categoria) => {
+            categorias
+              .filter((categoria) => {
+                const term = String(search || "").trim().toLowerCase();
+                if (!term) return true;
+                return String(categoria.nombre || "").toLowerCase().includes(term);
+              })
+              .map((categoria) => {
               const isEditing = editingId === categoria.id_categoria;
               return (
                 <div key={categoria.id_categoria} className="data-row" style={{ alignItems: "center" }}>
@@ -182,7 +201,7 @@ const SuperUsuarioCategorias = () => {
                   </div>
                 </div>
               );
-            })
+              })
           )}
         </div>
       </div>

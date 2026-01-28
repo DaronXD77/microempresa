@@ -1400,6 +1400,7 @@ select {
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
+  margin-left: auto;
 }
 
 .portal-container {
@@ -1494,7 +1495,7 @@ select {
     inset: 0 auto 0 0;
     width: min(86vw, 320px);
     height: 100vh;
-    padding: 16px 16px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
     gap: 16px;
     z-index: 1000;
     transform: translateX(0);
@@ -1505,7 +1506,7 @@ select {
 
   .sidebar.collapsed {
     width: min(86vw, 320px);
-    padding: 16px 16px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
     transform: translateX(-102%);
   }
 
