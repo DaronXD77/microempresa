@@ -12,6 +12,7 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
+  const [previewFile, setPreviewFile] = useState(null);
 
   // Construye link absoluto al backend para abrir comprobante
   const buildProofLink = (proofUrlOrPath) => {
@@ -52,6 +53,30 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
       setItems(data.pendientes || []);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  };
+
+  const openProof = async (value) => {
+    const url = buildProofLink(value);
+    if (!url) return;
+    try {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) return;
+      const contentType = res.headers.get("content-type") || "";
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setPreviewFile({
+        url: objectUrl,
+        title: "Comprobante",
+        isPdf: contentType.includes("pdf"),
+      });
+    } catch (e) {
+      // ignore
     }
   };
 
@@ -176,9 +201,9 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
 
                     {proofHref ? (
                       <div style={{ marginTop: 8 }}>
-                        <a href={proofHref} target="_blank" rel="noreferrer">
+                        <button type="button" className="ghost-button" onClick={() => openProof(proofHref)}>
                           Ver comprobante
-                        </a>
+                        </button>
                       </div>
                     ) : (
                       <div className="muted" style={{ marginTop: 8 }}>
@@ -206,6 +231,22 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {previewFile && (
+          <div className="image-modal" onClick={closePreview}>
+            <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="image-modal-title">{previewFile.title}</div>
+              <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+                ×
+              </button>
+              {previewFile.isPdf ? (
+                <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+              ) : (
+                <img src={previewFile.url} alt={previewFile.title} />
+              )}
+            </div>
           </div>
         )}
       </div>

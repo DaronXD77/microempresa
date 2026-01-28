@@ -106,6 +106,14 @@ const DashboardLayout = ({
             <span />
             <span />
           </button>
+          <button
+            type="button"
+            className="sidebar-close"
+            onClick={closeMobileNav}
+            aria-label="Cerrar menu"
+          >
+            ×
+          </button>
         </div>
 
         <nav className="menu">

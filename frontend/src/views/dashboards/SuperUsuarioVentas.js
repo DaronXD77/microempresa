@@ -6,6 +6,7 @@ import { fetchAdminVenta, fetchAdminVentas } from "../../controllers/ventaContro
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -23,6 +24,7 @@ const SuperUsuarioVentas = () => {
   const [filters, setFilters] = useState({ date: "", tenant_id: "" });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
 
   const [selectedVenta, setSelectedVenta] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -93,10 +95,28 @@ const SuperUsuarioVentas = () => {
     return `${API_BASE}/${value}`;
   };
 
-  const openComprobante = (value) => {
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  };
+
+  const openComprobante = async (value) => {
     const url = resolveComprobanteUrl(value);
     if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) return;
+      const contentType = res.headers.get("content-type") || "";
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setPreviewFile({
+        url: objectUrl,
+        title: "Comprobante",
+        isPdf: contentType.includes("pdf"),
+      });
+    } catch (e) {
+      // ignore
+    }
   };
 
   // Genera un informe PDF con las ventas actualmente listadas (respeta filtros)
@@ -192,7 +212,7 @@ const SuperUsuarioVentas = () => {
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_ventas_admin_${stamp}.pdf`);
+      openPdf(doc, `informe_ventas_admin_${stamp}.pdf`);
     } catch (e) {
       console.error(e);
       setMessage(e?.message || "No se pudo generar el informe.");
@@ -292,6 +312,22 @@ const SuperUsuarioVentas = () => {
             </button>
           </div>
         </div>
+
+        {previewFile && (
+          <div className="image-modal" onClick={closePreview}>
+            <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="image-modal-title">{previewFile.title}</div>
+              <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+                ×
+              </button>
+              {previewFile.isPdf ? (
+                <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+              ) : (
+                <img src={previewFile.url} alt={previewFile.title} />
+              )}
+            </div>
+          </div>
+        )}
       </SectionCard>
     );
   }

@@ -7,6 +7,7 @@ import ToastModal from "../ToastModal";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "").replace(/\/$/, "");
@@ -127,6 +128,7 @@ const MicroempresaPedidos = () => {
 
   const [message, setMessage] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
+  const [previewFile, setPreviewFile] = useState(null);
   const [actionLock, setActionLock] = useState({});
   const [opcionesEntrega, setOpcionesEntrega] = useState({});
   const [reprogramOpen, setReprogramOpen] = useState({});
@@ -331,7 +333,7 @@ const MicroempresaPedidos = () => {
         },
       });
 
-      doc.save(`reporte_pedidos_${mesActual.key}.pdf`);
+      openPdf(doc, `reporte_pedidos_${mesActual.key}.pdf`);
       setMessage("Reporte PDF generado.");
     } catch (e) {
       setMessage(e?.message || "No se pudo generar el reporte PDF.");
@@ -428,6 +430,11 @@ const MicroempresaPedidos = () => {
     await load();
   };
 
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  };
+
   const handleVerComprobante = async (ventaId) => {
     setMessage("");
     const url = `${API_BASE}/api/ventas/${ventaId}/comprobante/download`;
@@ -438,10 +445,14 @@ const MicroempresaPedidos = () => {
         setMessage(data.error || "No se pudo abrir el comprobante.");
         return;
       }
+      const contentType = res.headers.get("content-type") || "";
       const blob = await res.blob();
       const objectUrl = window.URL.createObjectURL(blob);
-      window.open(objectUrl, "_blank", "noopener,noreferrer");
-      setTimeout(() => window.URL.revokeObjectURL(objectUrl), 30000);
+      setPreviewFile({
+        url: objectUrl,
+        title: "Comprobante",
+        isPdf: contentType.includes("pdf"),
+      });
     } catch (err) {
       setMessage(err?.message || "No se pudo abrir el comprobante.");
     }
@@ -453,13 +464,29 @@ const MicroempresaPedidos = () => {
   return (
     <SectionCard title="Pedidos virtuales" description="Revisa comprobantes y prepara envios.">
       <div className="card">
-        <ToastModal
+      <ToastModal
           open={toast.open}
           message={toast.message}
           variant={toast.variant}
           duration={10000}
           onClose={() => setToast({ open: false, message: "", variant: "success" })}
-        />
+      />
+
+      {previewFile && (
+        <div className="image-modal" onClick={closePreview}>
+          <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="image-modal-title">{previewFile.title}</div>
+            <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+              ×
+            </button>
+            {previewFile.isPdf ? (
+              <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+            ) : (
+              <img src={previewFile.url} alt={previewFile.title} />
+            )}
+          </div>
+        </div>
+      )}
 
         {/*  Selector de mes + botón PDF */}
         <div

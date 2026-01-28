@@ -615,8 +615,9 @@ const MicroempresaPOS = () => {
                 setPreviewImage(null);
                 setPreviewTitle("");
               }}
+              aria-label="Cerrar"
             >
-              Cerrar
+              ×
             </button>
             <img src={previewImage} alt={previewTitle} />
           </div>

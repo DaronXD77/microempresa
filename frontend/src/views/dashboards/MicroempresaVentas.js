@@ -9,6 +9,7 @@ import { resolveAssetUrl } from "../../utils/url";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -22,6 +23,7 @@ const MicroempresaVentas = () => {
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
   const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
   const [qrUploading, setQrUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
 
   //  NUEVO: mes seleccionado
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -76,13 +78,35 @@ const MicroempresaVentas = () => {
     return `${API_BASE}/${value}`;
   };
 
-  const openComprobante = (value) => {
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  };
+
+  const openComprobante = async (value) => {
     const url = resolveComprobanteUrl(value);
     if (!url) {
       setMessage("Comprobante no disponible.");
       return;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    try {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.error || "No se pudo abrir el comprobante.");
+        return;
+      }
+      const contentType = res.headers.get("content-type") || "";
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setPreviewFile({
+        url: objectUrl,
+        title: "Comprobante",
+        isPdf: contentType.includes("pdf"),
+      });
+    } catch (err) {
+      setMessage(err?.message || "No se pudo abrir el comprobante.");
+    }
   };
 
   const formatMoney = (n) => `Bs ${Number(n || 0).toFixed(2)}`;
@@ -308,7 +332,7 @@ const MicroempresaVentas = () => {
       });
 
       const safeMonth = mesActual.key || "mes";
-      doc.save(`reporte_ventas_${safeMonth}.pdf`);
+      openPdf(doc, `reporte_ventas_${safeMonth}.pdf`);
       setMessage("Reporte PDF generado.");
     } catch (e) {
       setMessage(e?.message || "No se pudo generar el reporte PDF.");
@@ -403,6 +427,22 @@ const MicroempresaVentas = () => {
             </button>
           </div>
         </div>
+
+        {previewFile && (
+          <div className="image-modal" onClick={closePreview}>
+            <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="image-modal-title">{previewFile.title}</div>
+              <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+                ×
+              </button>
+              {previewFile.isPdf ? (
+                <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+              ) : (
+                <img src={previewFile.url} alt={previewFile.title} />
+              )}
+            </div>
+          </div>
+        )}
       </SectionCard>
     );
   }
@@ -436,10 +476,25 @@ const MicroempresaVentas = () => {
               <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
                 <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
                   <div className="image-modal-title">QR de pagos</div>
-                  <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)}>
-                    Cerrar
+                  <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)} aria-label="Cerrar">
+                    ×
                   </button>
                   <img src={resolveAssetUrl(micro.qr_url)} alt="QR de pagos" />
+                </div>
+              </div>
+            )}
+            {previewFile && (
+              <div className="image-modal" onClick={closePreview}>
+                <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+                  <div className="image-modal-title">{previewFile.title}</div>
+                  <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+                    ×
+                  </button>
+                  {previewFile.isPdf ? (
+                    <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+                  ) : (
+                    <img src={previewFile.url} alt={previewFile.title} />
+                  )}
                 </div>
               </div>
             )}

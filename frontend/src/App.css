@@ -1389,6 +1389,19 @@ select {
   padding: calc(32px + env(safe-area-inset-top)) 0 64px;
 }
 
+.sidebar-close {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .portal-container {
   max-width: 1280px;
   margin: 0 auto;
@@ -1582,6 +1595,12 @@ select {
 
   .sidebar-toggle {
     display: none;
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .topbar h1 {
@@ -2464,7 +2483,7 @@ select {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  z-index: 1400;
+  z-index: 2200;
 }
 
 .image-modal-card {
@@ -2475,6 +2494,7 @@ select {
   display: grid;
   gap: 12px;
   box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22);
+  position: relative;
 }
 
 .image-modal-title {
@@ -2487,6 +2507,35 @@ select {
   height: auto;
   border-radius: 12px;
   object-fit: contain;
+}
+
+.image-modal-frame {
+  width: 100%;
+  height: min(70vh, 640px);
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.image-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #d0d7de;
+  color: #111827;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 20px;
+}
+
+.image-modal-close:hover {
+  background: #f3f4f6;
 }
 
 .image-modal-close {

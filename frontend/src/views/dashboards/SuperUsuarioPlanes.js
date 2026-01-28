@@ -205,8 +205,8 @@ export default function SuperUsuarioPlanes() {
           <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
             <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="image-modal-title">QR del sistema</div>
-              <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)}>
-                Cerrar
+              <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)} aria-label="Cerrar">
+                ×
               </button>
               <img src={resolveAssetUrl(systemQrUrl)} alt="QR del sistema" />
             </div>
