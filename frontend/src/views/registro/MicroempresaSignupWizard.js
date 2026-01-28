@@ -17,7 +17,7 @@ import {
   submitMicroempresaPayment,
 } from "../../controllers/subscriptionController";
 import ToastModal from "../ToastModal";
-import { resolveAssetUrl } from "../utils/url";
+import { resolveAssetUrl } from "../../utils/url";
 
 const storage = {
   get: (k, fallback = "") => localStorage.getItem(k) || fallback,
