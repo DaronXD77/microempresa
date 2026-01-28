@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, send_from_directory, request, current_app
+from flask import Blueprint, jsonify, send_from_directory, request, current_app, redirect
 from flask_login import current_user
 
 from ..extensions import db
@@ -62,7 +62,13 @@ def download_proof(signup_id: int):
         return error
 
     sol = SuscripcionSolicitud.query.get_or_404(signup_id)
-    if not sol.comprobante_path or not os.path.exists(sol.comprobante_path):
+    if not sol.comprobante_path:
+        return jsonify({"error": "No hay comprobante"}), 404
+
+    if sol.comprobante_path.startswith("http://") or sol.comprobante_path.startswith("https://"):
+        return redirect(sol.comprobante_path)
+
+    if not os.path.exists(sol.comprobante_path):
         return jsonify({"error": "No hay comprobante"}), 404
 
     directory = os.path.dirname(sol.comprobante_path)

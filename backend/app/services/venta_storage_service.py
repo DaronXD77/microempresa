@@ -4,6 +4,8 @@ import uuid
 from werkzeug.utils import secure_filename
 from flask import current_app
 
+from .cloudinary_service import is_configured as cloudinary_configured, upload_file
+
 QR_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 COMPROBANTE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
 
@@ -19,6 +21,11 @@ def _resolve_upload_root():
 def save_qr_image(file_storage, tenant_id: int) -> str:
     if not file_storage or not getattr(file_storage, "filename", ""):
         raise ValueError("Archivo requerido")
+
+    if cloudinary_configured():
+        url = upload_file(file_storage, f"qr/{tenant_id}")
+        if url:
+            return url
 
     filename = secure_filename(file_storage.filename)
     _, ext = os.path.splitext(filename)
@@ -40,6 +47,11 @@ def save_system_qr(file_storage) -> str:
     if not file_storage or not getattr(file_storage, "filename", ""):
         raise ValueError("Archivo requerido")
 
+    if cloudinary_configured():
+        url = upload_file(file_storage, "system/qr")
+        if url:
+            return url
+
     filename = secure_filename(file_storage.filename)
     _, ext = os.path.splitext(filename)
     ext = ext.lower()
@@ -60,6 +72,11 @@ def save_comprobante(file_storage, venta_id: int) -> str:
     if not file_storage or not getattr(file_storage, "filename", ""):
         raise ValueError("Archivo requerido")
 
+    if cloudinary_configured():
+        url = upload_file(file_storage, f"comprobantes/{venta_id}")
+        if url:
+            return url
+
     filename = secure_filename(file_storage.filename)
     _, ext = os.path.splitext(filename)
     ext = ext.lower()
@@ -79,6 +96,8 @@ def save_comprobante(file_storage, venta_id: int) -> str:
 def build_upload_url(path: str) -> str:
     if not path:
         return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
     if path.startswith("/uploads/"):
         return path
     base = current_app.config.get("UPLOAD_FOLDER") or "uploads"

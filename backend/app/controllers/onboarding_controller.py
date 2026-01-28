@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..models import Microempresa, Plan, SuscripcionSolicitud
 from ..services.auth_service import hash_password, is_valid_schedule, is_valid_url
+from ..services.cloudinary_service import is_configured as cloudinary_configured, upload_file
 
 onboarding_bp = Blueprint("onboarding", __name__)
 
@@ -312,16 +313,18 @@ def onboarding_submit():
     if ext and ext not in ALLOWED_EXTS:
         return jsonify({"error": "Formato no permitido. Usa PDF/JPG/PNG"}), 400
 
-    upload_root = _get_upload_root()
     tenant_id = int(solicitud.tenant_id)
+    if cloudinary_configured():
+        save_path = upload_file(file, f"suscripciones/{tenant_id}")
+    else:
+        upload_root = _get_upload_root()
+        folder = os.path.join(upload_root, "comprobantes", str(tenant_id))
+        os.makedirs(folder, exist_ok=True)
 
-    folder = os.path.join(upload_root, "comprobantes", str(tenant_id))
-    os.makedirs(folder, exist_ok=True)
-
-    stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    final_name = f"{stamp}_{filename}" if filename else f"{stamp}_comprobante"
-    save_path = os.path.join(folder, final_name)
-    file.save(save_path)
+        stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        final_name = f"{stamp}_{filename}" if filename else f"{stamp}_comprobante"
+        save_path = os.path.join(folder, final_name)
+        file.save(save_path)
 
     solicitud.id_plan = plan.id_plan
     solicitud.estado = "en_espera"

@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 import os
 import uuid
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request, send_from_directory, redirect
 from flask_login import current_user
 from sqlalchemy import func
 from ..services.email_service import send_pedido_estado_email
@@ -551,7 +551,13 @@ def download_comprobante(venta_id):
 
     pago = Pago.query.filter_by(id_venta=venta_id).first()
     path = pago.referencia if pago else None
-    if not path or not os.path.exists(path):
+    if not path:
+        return jsonify({"error": "Comprobante no encontrado"}), 404
+
+    if path.startswith("http://") or path.startswith("https://"):
+        return redirect(path)
+
+    if not os.path.exists(path):
         return jsonify({"error": "Comprobante no encontrado"}), 404
 
     directory = os.path.dirname(path)
