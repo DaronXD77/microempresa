@@ -81,7 +81,7 @@ const DashboardLayout = ({
   const switchRoles = availableRoles.filter((role) => role !== currentRole);
 
   return (
-    <div className={`app-shell ${themeClass || ""}`.trim()}>
+    <div className={`app-shell ${!sidebarCollapsed ? "nav-open" : ""} ${themeClass || ""}`.trim()}>
       <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`.trim()}>
         <div className="sidebar-top">
           <div className="brand">
@@ -117,7 +117,19 @@ const DashboardLayout = ({
 
       <div className="main">
         <header className="topbar">
-          <h1>{title}</h1>
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              aria-label="Abrir menu"
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <h1>{title}</h1>
+          </div>
 
           <div className="user-menu">
             <button

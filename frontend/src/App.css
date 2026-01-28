@@ -1472,52 +1472,110 @@ select {
 
 @media (max-width: 900px) {
   .app-shell {
-    flex-direction: column;
+    display: block;
+    min-height: 100vh;
   }
 
   .sidebar {
-    width: 100%;
-    padding: 14px 16px;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    overflow-x: auto;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(86vw, 320px);
+    height: 100vh;
+    padding: 16px 16px;
+    gap: 16px;
+    z-index: 1000;
+    transform: translateX(0);
+    transition: transform 0.18s ease;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .sidebar-top {
-    flex: 0 0 auto;
+  .sidebar.collapsed {
+    width: min(86vw, 320px);
+    padding: 16px 16px;
+    transform: translateX(-102%);
   }
 
-  .brand {
-    font-size: 16px;
+  .sidebar.collapsed .brand {
+    display: block;
+  }
+
+  .sidebar.collapsed .menu-label {
+    display: inline;
+  }
+
+  .sidebar.collapsed .menu-item {
+    justify-content: flex-start;
+  }
+
+  .app-shell.nav-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 900;
   }
 
   .menu {
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-
-  .menu-item {
-    white-space: nowrap;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  .main {
-    padding: 16px 16px 24px;
-  }
-
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 10px;
   }
 
+  .menu-item {
+    padding: 12px 12px;
+    border-radius: 12px;
+  }
+
+  .main {
+    padding: 12px 14px 22px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #f7f7fb;
+    padding: 10px 0;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-nav-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #d0d7de;
+    background: #fff;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0;
+  }
+
+  .mobile-nav-toggle span {
+    width: 18px;
+    height: 2px;
+    background: #111827;
+    border-radius: 999px;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
   .topbar h1 {
-    font-size: 20px;
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-nav-toggle {
+    display: none;
   }
 }
 

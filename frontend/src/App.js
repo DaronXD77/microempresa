@@ -207,7 +207,10 @@ const AppContent = () => {
   const [message, setMessage] = useState("");
   const [appToast, setAppToast] = useState({ open: false, message: "", variant: "success" });
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 900;
+  });
   const [roleOptions, setRoleOptions] = useState([]);
   const [pendingLogin, setPendingLogin] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
