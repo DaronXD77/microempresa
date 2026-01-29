@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearCart, getCart, removeCartItem, setCartOwner, updateCartItem } from "../utils/cartStorage";
 import { crearVentaVirtual, subirComprobante } from "../controllers/ventaController";
-import { fetchMe } from "../controllers/authController";
+import { fetchMe, login } from "../controllers/authController";
 import { lookupPublicCliente, registerPublicCliente } from "../controllers/clienteController";
 import ToastModal from "./ToastModal";
 import { resolveAssetUrl } from "../utils/url";
@@ -62,6 +62,9 @@ const PortalCarrito = () => {
   const [qrOpen, setQrOpen] = useState(false);
   const [registroForm, setRegistroForm] = useState(emptyRegistro);
   const [registroSaving, setRegistroSaving] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [loginSaving, setLoginSaving] = useState(false);
   const lookupTimerRef = useRef(null);
   const lookupLastRef = useRef("");
 
@@ -299,6 +302,44 @@ const PortalCarrito = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+  };
+
+  const handleLoginChange = (event) => {
+    const { name, value } = event.target;
+    setLoginForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleLoginSubmit = async () => {
+    const email = String(loginForm.email || "").trim().toLowerCase();
+    const password = String(loginForm.password || "");
+    if (!email || !password) {
+      setToast({ open: true, message: "Email y password son requeridos.", variant: "warning", onAction: null });
+      return;
+    }
+    setLoginSaving(true);
+    const { response, data } = await login({ username: email, password, role: "cliente" });
+    setLoginSaving(false);
+    if (!response.ok) {
+      setToast({ open: true, message: data.error || "No se pudo iniciar sesión.", variant: "warning", onAction: null });
+      return;
+    }
+    setAuthUser(data.user || null);
+    setAuthRole(data.role || "cliente");
+    setAuthReady(true);
+    setCliente({
+      nombre: data.user?.nombre || "",
+      apellido_paterno: data.user?.apellido_paterno || "",
+      apellido_materno: data.user?.apellido_materno || "",
+      email: data.user?.email || email,
+      es_empresa: Boolean(data.user?.razon_social),
+      razon_social: data.user?.razon_social || "",
+    });
+    setLoginForm({ email: "", password: "" });
+    setShowLogin(false);
+    setToast({ open: true, message: "Sesión iniciada. Continúa con el pago.", variant: "success", onAction: null });
   };
 
   const handleRegistroSubmit = async () => {
@@ -641,9 +682,48 @@ const PortalCarrito = () => {
               >
                 {registroSaving ? "Registrando..." : "Registrarme y continuar"}
               </button>
-              <Link to="/" className="primary-link">
-                Ya tengo cuenta, iniciar sesión
-              </Link>
+              {!showLogin ? (
+                <button type="button" className="link-button" onClick={() => setShowLogin(true)}>
+                  Ya tengo cuenta, iniciar sesión
+                </button>
+              ) : (
+                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                  <div className="form-title">Iniciar sesión</div>
+                  <label>
+                    Email
+                    <input
+                      name="email"
+                      type="email"
+                      value={loginForm.email}
+                      onChange={handleLoginChange}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      name="password"
+                      type="password"
+                      value={loginForm.password}
+                      onChange={handleLoginChange}
+                      required
+                    />
+                  </label>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={handleLoginSubmit}
+                      disabled={loginSaving}
+                    >
+                      {loginSaving ? "Ingresando..." : "Iniciar sesión"}
+                    </button>
+                    <button type="button" className="ghost-button" onClick={() => setShowLogin(false)}>
+                      Volver
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <>
