@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Dialog } from "@capacitor/dialog";
 
 import ForgotPasswordView from "./views/ForgotPasswordView";
 import ResetPasswordView from "./views/ResetPasswordView";
@@ -1113,9 +1115,28 @@ const AppContent = () => {
 };
 
 export default function App() {
+  useEffect(() => {
+    if (!window.Capacitor) return;
+    const handler = CapacitorApp.addListener("backButton", async () => {
+      const hash = window.location.hash || "";
+      if (hash && hash !== "#/" && hash !== "#/") {
+        window.history.back();
+        return;
+      }
+      const res = await Dialog.confirm({
+        title: "Salir",
+        message: "¿Deseas salir de la aplicación?",
+        okButtonTitle: "Salir",
+        cancelButtonTitle: "Cancelar",
+      });
+      if (res.value) CapacitorApp.exitApp();
+    });
+    return () => handler.remove();
+  }, []);
+
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppContent />
-    </BrowserRouter>
+    </HashRouter>
   );
 }

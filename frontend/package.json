@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
+    "@capacitor/dialog": "^8.0.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "qrcode.react": "^3.1.0",

@@ -13,7 +13,7 @@ const cleanupModal = (modal, url) => {
   }
 };
 
-const openPdfModal = (blobUrl, title) => {
+const openPdfModal = (src, title, revokeUrl = null) => {
   const existing = document.getElementById("pdf-modal");
   if (existing) existing.remove();
 
@@ -57,17 +57,17 @@ const openPdfModal = (blobUrl, title) => {
   close.style.background = "#fff";
   close.style.fontSize = "20px";
   close.style.cursor = "pointer";
-  close.onclick = () => cleanupModal(modal, blobUrl);
+  close.onclick = () => cleanupModal(modal, revokeUrl);
 
   const frame = document.createElement("iframe");
-  frame.src = blobUrl;
+  frame.src = src;
   frame.title = title || "Reporte";
   frame.style.width = "100%";
   frame.style.height = "70vh";
   frame.style.border = "0";
   frame.style.borderRadius = "12px";
 
-  modal.onclick = () => cleanupModal(modal, blobUrl);
+  modal.onclick = () => cleanupModal(modal, revokeUrl);
   card.onclick = (e) => e.stopPropagation();
 
   card.appendChild(titleEl);
@@ -80,9 +80,14 @@ const openPdfModal = (blobUrl, title) => {
 export const openPdf = (doc, filename) => {
   try {
     if (isMobileLike()) {
+      const dataUrl = doc.output("datauristring");
+      if (dataUrl) {
+        openPdfModal(dataUrl, filename || "Reporte");
+        return;
+      }
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
-      openPdfModal(url, filename || "Reporte");
+      openPdfModal(url, filename || "Reporte", url);
       return;
     }
   } catch (e) {

@@ -258,6 +258,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-right: 2px;
 }
 
 .sidebar-toggle {
@@ -1502,6 +1503,10 @@ select {
     transition: transform 0.18s ease;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-top {
+    padding-top: env(safe-area-inset-top);
   }
 
   .sidebar.collapsed {
