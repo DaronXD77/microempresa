@@ -38,6 +38,7 @@ import {
   updateCliente,
   updateMicroempresa,
 } from "./controllers/userController";
+import { registerPublicCliente } from "./controllers/clienteController";
 import { updateEmpleadoMe } from "./controllers/empleadoController";
 
 import DataList from "./views/DataList";
@@ -502,16 +503,8 @@ const AppContent = () => {
       };
 
       try {
-        const res = await fetch("/api/public/clientes/register", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
+        const { response, data } = await registerPublicCliente(payload);
+        if (!response.ok) {
           setMessage(data.error || "Ocurrió un error");
           return;
         }
