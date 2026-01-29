@@ -1,6 +1,15 @@
+const isNativeCapacitor = () => {
+  if (typeof window === "undefined") return false;
+  const cap = window.Capacitor;
+  if (!cap) return false;
+  if (typeof cap.isNativePlatform === "function") return cap.isNativePlatform();
+  if (typeof cap.getPlatform === "function") return cap.getPlatform() !== "web";
+  return false;
+};
+
 const isMobileLike = () => {
   if (typeof window === "undefined") return false;
-  if (window.Capacitor) return true;
+  if (isNativeCapacitor()) return true;
   const ua = navigator.userAgent || "";
   return /android|iphone|ipad|ipod/i.test(ua);
 };
@@ -195,7 +204,7 @@ const downloadBrowser = (payload, filename) => {
 };
 
 const buildDownloadHandler = (safeName, base64, blob) => async (setStatus) => {
-  if (typeof window !== "undefined" && window.Capacitor) {
+  if (isNativeCapacitor()) {
     try {
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
       try {

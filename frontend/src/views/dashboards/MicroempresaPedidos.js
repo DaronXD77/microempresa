@@ -39,6 +39,37 @@ const buildEmbedSrcFromQuery = (query) => {
   return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
 };
 
+const buildEmbedSrcFromUrl = (value, fallbackText = "") => {
+  const raw = String(value || "").trim();
+  const fallback = String(fallbackText || "").trim();
+  const toEmbed = (query) => `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+  if (!raw && fallback) return toEmbed(fallback);
+  if (!raw) return "";
+  if (raw.startsWith("http")) {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname || "";
+      const q = url.searchParams.get("q") || url.searchParams.get("query");
+      if (q) return toEmbed(q);
+      const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
+      if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
+      if (host.includes("maps.app.goo.gl") || host.includes("goo.gl")) {
+        return toEmbed(raw);
+      }
+      if (host.includes("google.com") && url.pathname.startsWith("/maps")) {
+        const withEmbed = raw.includes("output=embed")
+          ? raw
+          : `${raw}${raw.includes("?") ? "&" : "?"}output=embed`;
+        return withEmbed;
+      }
+    } catch {
+      // ignore
+    }
+    return fallback ? toEmbed(fallback) : "";
+  }
+  return toEmbed(raw);
+};
+
 const getMonthKey = (dateValue) => {
   if (!dateValue) return null;
   const d = new Date(dateValue);
@@ -630,22 +661,33 @@ const MicroempresaPedidos = () => {
                     ))}
                   </div>
 
-                  {(pedido.estado_envio === "empaquetado" || pedido.estado_envio === "entregado") && (
-                    <div className="card" style={{ boxShadow: "none" }}>
-                      <div className="form-title">Entrega seleccionada</div>
-                      {seleccion ? (
-                        <div className="muted">
-                          {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto} (
-                          <a href={seleccion.maps_url} target="_blank" rel="noopener noreferrer">
-                            Ver mapa
-                          </a>
-                          )
-                        </div>
-                      ) : (
-                        <div className="muted">Esperando selección del cliente.</div>
-                      )}
-                    </div>
-                  )}
+                   {(pedido.estado_envio === "empaquetado" || pedido.estado_envio === "entregado") && (
+                     <div className="card" style={{ boxShadow: "none" }}>
+                       <div className="form-title">Entrega seleccionada</div>
+                       {seleccion ? (
+                         <div className="muted">
+                           {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto} (
+                           <a href={seleccion.maps_url} target="_blank" rel="noopener noreferrer">
+                             Ver mapa
+                           </a>
+                           )
+                         </div>
+                       ) : (
+                         <div className="muted">Esperando selección del cliente.</div>
+                       )}
+                       {seleccion && (
+                         <iframe
+                           title={`map-entrega-${pedido.id_venta}`}
+                           src={buildEmbedSrcFromUrl(seleccion.maps_url, seleccion.lugar_texto)}
+                           width="100%"
+                           height="200"
+                           style={{ border: 0, borderRadius: 10, marginTop: 8 }}
+                           loading="lazy"
+                           referrerPolicy="no-referrer-when-downgrade"
+                         />
+                       )}
+                     </div>
+                   )}
 
                   <div className="pedido-actions">
                     {(() => {
@@ -729,13 +771,23 @@ const MicroempresaPedidos = () => {
                               </div>
                             </div>
 
-                            <button type="button" className="primary-button" onClick={() => handleEmpaquetar(pedido.id_venta)}>
-                              Marcar empaquetado y en envio
-                            </button>
+                             <div className="pedido-action-row">
+                               <button
+                                 type="button"
+                                 className="primary-button"
+                                 onClick={() => handleEmpaquetar(pedido.id_venta)}
+                               >
+                                 Marcar empaquetado y en envio
+                               </button>
 
-                            <button type="button" className="danger-button" onClick={() => handleRechazar(pedido.id_venta)}>
-                              Denegar pedido
-                            </button>
+                               <button
+                                 type="button"
+                                 className="danger-button"
+                                 onClick={() => handleRechazar(pedido.id_venta)}
+                               >
+                                 Denegar pedido
+                               </button>
+                             </div>
                           </>
                         );
                       }

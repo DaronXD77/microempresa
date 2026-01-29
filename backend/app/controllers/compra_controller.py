@@ -156,9 +156,7 @@ def create_compra():
     db.session.add(compra)
     db.session.commit()
 
-    data = compra.to_dict()
-    data["pdf_url"] = f"/api/compras/{compra.id_compra}/pdf"
-    return jsonify({"compra": data}), 201
+    return jsonify({"compra": compra.to_dict()}), 201
 
 @compra_bp.get("/api/compras/<int:compra_id>/pdf")
 def compra_pdf(compra_id):

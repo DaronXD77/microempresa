@@ -299,6 +299,10 @@ body {
   background: #b91c1c;
 }
 
+.theme-empleado .sidebar {
+  background: #b91c1c;
+}
+
 .theme-cliente .sidebar {
   background: #111827;
 }
@@ -854,6 +858,37 @@ select {
 .proveedores-table td input {
   width: 100%;
   min-width: 140px;
+}
+
+.info-callout {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.info-callout strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+}
+
+.pedido-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pedido-action-row .primary-button,
+.pedido-action-row .danger-button {
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 .producto-table {

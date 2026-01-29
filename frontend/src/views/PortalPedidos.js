@@ -103,11 +103,15 @@ const PortalPedidos = () => {
     if (raw.startsWith("http")) {
       try {
         const url = new URL(raw);
+        const host = url.hostname || "";
         const q = url.searchParams.get("q") || url.searchParams.get("query");
         if (q) return toEmbed(q);
         const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
         if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
-        if (url.hostname.includes("google.com") && url.pathname.startsWith("/maps")) {
+        if (host.includes("maps.app.goo.gl") || host.includes("goo.gl")) {
+          return toEmbed(raw);
+        }
+        if (host.includes("google.com") && url.pathname.startsWith("/maps")) {
           const withEmbed = raw.includes("output=embed")
             ? raw
             : `${raw}${raw.includes("?") ? "&" : "?"}output=embed`;
@@ -116,7 +120,7 @@ const PortalPedidos = () => {
       } catch {
         // ignore
       }
-      return fallback ? toEmbed(fallback) : raw;
+      return fallback ? toEmbed(fallback) : "";
     }
     return toEmbed(raw);
   };
@@ -391,9 +395,12 @@ const PortalPedidos = () => {
                         />
                       ) : null}
                       {isPhysicalStore(pedido) && (
-                        <div className="muted" style={{ marginTop: 8 }}>
-                          Puedes elegir un lugar y horario de entrega (segun las opciones asignadas por la microempresa o empleado)
-                          o pasar a recoger al local en el horario y lugar establecidos.
+                        <div className="info-callout" style={{ marginTop: 10 }}>
+                          <strong>Opciones de entrega</strong>
+                          <span>
+                            Puedes elegir un lugar y horario de entrega (segun las opciones asignadas por la microempresa o empleado)
+                            o pasar a recoger al local en el horario y lugar establecidos.
+                          </span>
                         </div>
                       )}
                   </div>

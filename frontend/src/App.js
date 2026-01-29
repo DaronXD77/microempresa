@@ -202,6 +202,8 @@ const empleadoMenuConfig = [
   { key: "historial_compras", path: "/historial-compras", label: "Historial compras", icon: Icon.Ventas },
 ];
 
+const empleadoProfileItem = { path: "/perfil", label: "Perfil", icon: Icon.Perfil };
+
 const AppContent = () => {
   const [form, setForm] = useState(emptyForm);
   const [user, setUser] = useState(null);
@@ -235,10 +237,13 @@ const AppContent = () => {
       .join(" ");
   };
 
-  const displayName =
+  const baseDisplayName =
     role === "microempresa"
       ? user?.nombre || "Usuario"
       : buildFullName(user) || user?.username || "Usuario";
+
+  const empleadoEmpresa = role === "empleado" ? (user?.microempresa_nombre || "") : "";
+  const displayName = empleadoEmpresa ? `${baseDisplayName} · ${empleadoEmpresa}` : baseDisplayName;
 
   const initials = displayName.slice(0, 2).toUpperCase();
   const avatarUrl = role === "microempresa" ? user?.logo_url : null;
@@ -247,9 +252,10 @@ const AppContent = () => {
 
     if (role === "empleado") {
       const permisos = Array.isArray(user?.permisos) ? user.permisos : [];
-      return empleadoMenuConfig
+      const items = empleadoMenuConfig
         .filter((item) => permisos.includes(item.key))
         .map(({ key, ...item }) => item);
+      return [...items, empleadoProfileItem];
     }
 
     if (role === "microempresa") {
@@ -433,6 +439,9 @@ const AppContent = () => {
     setUser(data.user);
     setRole(data.role);
     setAvailableRoles(data.available_roles || []);
+    if (data.role === "cliente" && data.user?.email) {
+      setCartOwner(String(data.user.email || "").toLowerCase());
+    }
     setForm(emptyForm);
     setMenuOpen(false);
     resetAuthState();
@@ -564,6 +573,9 @@ const AppContent = () => {
     setUser(data.user);
     setRole(data.role);
     setAvailableRoles(data.available_roles || []);
+    if (data.role === "cliente" && data.user?.email) {
+      setCartOwner(String(data.user.email || "").toLowerCase());
+    }
     setForm(emptyForm);
     setMenuOpen(false);
     resetAuthState();
@@ -595,6 +607,9 @@ const AppContent = () => {
     setUser(data.user);
     setRole(data.role);
     setAvailableRoles(data.available_roles || []);
+    if (data.role === "cliente" && data.user?.email) {
+      setCartOwner(String(data.user.email || "").toLowerCase());
+    }
     setMenuOpen(false);
   };
 
@@ -652,15 +667,22 @@ const AppContent = () => {
         const tipo = profileForm.tipo_tienda || "fisica";
 
         if (tipo === "fisica") {
-          if (profileForm.horario_inicio || profileForm.horario_fin) {
-            if (!profileForm.horario_inicio || !profileForm.horario_fin) {
-              setProfileMessage("Debes seleccionar un rango de horario válido");
-              return;
-            }
-            if (profileForm.horario_inicio >= profileForm.horario_fin) {
-              setProfileMessage("El horario de fin debe ser mayor al de inicio");
-              return;
-            }
+          if (!profileForm.direccion?.trim()) {
+            setProfileMessage("Dirección requerida para tienda física");
+            return;
+          }
+          if (!profileForm.horario_inicio || !profileForm.horario_fin) {
+            setProfileMessage("Debes seleccionar un rango de horario válido");
+            return;
+          }
+          if (profileForm.horario_inicio >= profileForm.horario_fin) {
+            setProfileMessage("El horario de fin debe ser mayor al de inicio");
+            return;
+          }
+          const phone = String(profileForm.telefono_contacto || "").trim();
+          if (!/^\d{8}$/.test(phone)) {
+            setProfileMessage("El celular debe tener 8 dígitos");
+            return;
           }
         }
 
@@ -1051,7 +1073,7 @@ const AppContent = () => {
               <SectionCard title="Perfil">
                 <p className="muted">El perfil no está disponible en modo invitado.</p>
               </SectionCard>
-            ) : role === "super_usuario" || role === "microempresa" || role === "cliente" ? (
+            ) : role === "super_usuario" || role === "microempresa" || role === "cliente" || role === "empleado" ? (
               <ProfileView
                 role={role}
                 form={profileForm}
