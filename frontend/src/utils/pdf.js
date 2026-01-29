@@ -67,12 +67,29 @@ const openPdfModal = (src, title, revokeUrl = null) => {
   frame.style.border = "0";
   frame.style.borderRadius = "12px";
 
+  const object = document.createElement("object");
+  object.data = src;
+  object.type = "application/pdf";
+  object.style.width = "100%";
+  object.style.height = "70vh";
+  object.style.border = "0";
+  object.style.borderRadius = "12px";
+
+  const fallback = document.createElement("div");
+  fallback.textContent = "No se pudo mostrar el PDF. Mantén presionado para abrir.";
+  fallback.style.fontSize = "13px";
+  fallback.style.color = "#4b5563";
+  fallback.style.textAlign = "center";
+  fallback.style.padding = "8px 0";
+
   modal.onclick = () => cleanupModal(modal, revokeUrl);
   card.onclick = (e) => e.stopPropagation();
 
   card.appendChild(titleEl);
   card.appendChild(close);
+  card.appendChild(object);
   card.appendChild(frame);
+  card.appendChild(fallback);
   modal.appendChild(card);
   document.body.appendChild(modal);
 };
@@ -80,11 +97,6 @@ const openPdfModal = (src, title, revokeUrl = null) => {
 export const openPdf = (doc, filename) => {
   try {
     if (isMobileLike()) {
-      const dataUrl = doc.output("datauristring");
-      if (dataUrl) {
-        openPdfModal(dataUrl, filename || "Reporte");
-        return;
-      }
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       openPdfModal(url, filename || "Reporte", url);

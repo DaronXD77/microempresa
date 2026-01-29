@@ -759,6 +759,9 @@ export default function MicroempresaSignupWizard() {
                               alt="QR de pago"
                               className="qr-image"
                               onClick={() => setQrPreviewOpen(true)}
+                              onError={(e) => {
+                                e.currentTarget.alt = "QR no disponible";
+                              }}
                             />
                           ) : (
                             <div className="muted qr-placeholder">QR no disponible</div>

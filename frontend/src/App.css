@@ -2501,6 +2501,8 @@ select {
   gap: 12px;
   box-shadow: 0 20px 46px rgba(0, 0, 0, 0.22);
   position: relative;
+  max-height: 85vh;
+  overflow: auto;
 }
 
 .image-modal-title {
@@ -2511,6 +2513,7 @@ select {
 .image-modal-card img {
   width: 100%;
   height: auto;
+  max-height: 70vh;
   border-radius: 12px;
   object-fit: contain;
 }
