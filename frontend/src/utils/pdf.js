@@ -296,5 +296,3 @@ export const openRemotePdf = async (url, filename) => {
   const base64 = await blobToBase64(blob);
   await openPdfModal(data, safeName, buildDownloadHandler(safeName, base64, blob));
 };
-
-export { openPdf, openRemotePdf };
