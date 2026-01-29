@@ -4,6 +4,7 @@ import uuid
 
 import urllib.request
 import urllib.parse
+from datetime import timezone
 from io import BytesIO
 
 from flask import Blueprint, jsonify, request, send_from_directory, redirect, send_file
@@ -25,6 +26,8 @@ from ..models import (
 )
 from ..services.auth_service import get_current_role, hash_password, has_permission
 from ..services.venta_storage_service import build_upload_url, save_comprobante
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 venta_bp = Blueprint("venta", __name__)
 
@@ -84,6 +87,14 @@ def _parse_float(value, default=None):
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _format_fecha_local(dt):
+    if not dt:
+        return "-"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
 
 
 def _serialize_venta(venta: Venta, tenant_map=None):
@@ -593,6 +604,95 @@ def download_comprobante(venta_id):
     filename = os.path.basename(path)
     download = str(request.args.get("download") or "").lower() in {"1", "true", "yes"}
     return send_from_directory(directory, filename, as_attachment=download)
+
+
+@venta_bp.get("/api/ventas/<int:venta_id>/factura/pdf")
+def venta_factura_pdf(venta_id):
+    venta = Venta.query.get_or_404(venta_id)
+
+    if current_user.is_authenticated:
+        role = get_current_role(current_user)
+        if role == "cliente":
+            if venta.id_cliente and venta.id_cliente != current_user.id_cliente:
+                return jsonify({"error": "No autorizado"}), 403
+        elif role in {"microempresa", "empleado"}:
+            if venta.tenant_id != getattr(current_user, "tenant_id", None):
+                return jsonify({"error": "No autorizado"}), 403
+        else:
+            return jsonify({"error": "No autorizado"}), 403
+    else:
+        token = request.args.get("token")
+        if not token or token != venta.public_token:
+            return jsonify({"error": "No autorizado"}), 403
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 40
+
+    micro = Microempresa.query.filter_by(tenant_id=venta.tenant_id).first()
+    cliente = venta.cliente
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(40, y, f"Factura de venta #{venta.id_venta}")
+    y -= 18
+    c.setFont("Helvetica", 10)
+    c.drawString(40, y, f"Fecha: {_format_fecha_local(venta.fecha)}")
+    y -= 14
+    c.drawString(40, y, f"Microempresa: {micro.nombre if micro else '-'}")
+    y -= 14
+    if cliente:
+        cliente_nombre = " ".join([
+            cliente.nombre,
+            cliente.apellido_paterno,
+            cliente.apellido_materno,
+        ]).strip()
+        c.drawString(40, y, f"Cliente: {cliente_nombre or '-'}")
+        y -= 14
+        if cliente.ci:
+            c.drawString(40, y, f"CI: {cliente.ci}")
+            y -= 14
+        if cliente.razon_social:
+            c.drawString(40, y, f"Razon social: {cliente.razon_social}")
+            y -= 14
+
+    pagos = Pago.query.filter_by(id_venta=venta.id_venta).all()
+    metodo_pago = pagos[0].metodo if pagos else "-"
+    c.drawString(40, y, f"Metodo de pago: {metodo_pago}")
+    y -= 20
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(40, y, "Producto")
+    c.drawString(260, y, "Cantidad")
+    c.drawString(340, y, "Precio")
+    c.drawString(420, y, "Subtotal")
+    y -= 12
+    c.setFont("Helvetica", 9)
+
+    for det in venta.detalles:
+        if y < 80:
+            c.showPage()
+            y = height - 40
+        nombre = det.producto.nombre if det.producto else f"#{det.id_producto}"
+        c.drawString(40, y, nombre[:32])
+        c.drawString(260, y, str(det.cantidad))
+        c.drawString(340, y, f"Bs {float(det.precio_unitario or 0):.2f}")
+        c.drawString(420, y, f"Bs {float(det.subtotal or 0):.2f}")
+        y -= 12
+
+    y -= 8
+    c.setFont("Helvetica-Bold", 10)
+    c.drawRightString(520, y, f"Total: Bs {float(venta.total or 0):.2f}")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"factura_{venta.id_venta}.pdf",
+        mimetype="application/pdf",
+    )
 
 
 @venta_bp.patch("/api/ventas/<int:venta_id>/empaquetar")

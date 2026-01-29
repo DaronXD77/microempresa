@@ -7,7 +7,7 @@ import ToastModal from "../ToastModal";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { openPdf } from "../../utils/pdf";
+import { openPdf, openRemotePdf } from "../../utils/pdf";
 import { formatDateTimeLaPaz } from "../../utils/date";
 
 
@@ -512,6 +512,15 @@ const MicroempresaPedidos = () => {
     }
   };
 
+  const handleVerFactura = async (ventaId) => {
+    const url = `${API_BASE}/api/ventas/${ventaId}/factura/pdf`;
+    try {
+      await openRemotePdf(url, `factura_${ventaId}.pdf`);
+    } catch (err) {
+      setMessage(err?.message || "No se pudo abrir la factura.");
+    }
+  };
+
   // ---------------------------
   // Render
   // ---------------------------
@@ -634,7 +643,11 @@ const MicroempresaPedidos = () => {
                       <div>{formatMoney(pedido.total || 0)}</div>
                     </div>
                     <div>
-                      <div className="muted">Comprobante</div>
+                      <div className="muted">Factura</div>
+                      <button type="button" className="link-button" onClick={() => handleVerFactura(pedido.id_venta)}>
+                        Ver factura
+                      </button>
+                      <div className="muted" style={{ marginTop: 6 }}>Comprobante</div>
                       {pedido.comprobante_url ? (
                         <button type="button" className="link-button" onClick={() => handleVerComprobante(pedido.id_venta)}>
                           Ver comprobante

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { cancelarVenta, fetchMisPedidos, marcarEntregado, seleccionarEntrega } from "../controllers/ventaController";
 import ToastModal from "./ToastModal";
 import { formatDateTimeLaPaz } from "../utils/date";
+import { openRemotePdf } from "../utils/pdf";
 
 const PortalPedidos = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -81,6 +82,15 @@ const PortalPedidos = () => {
       });
     } catch (err) {
       setMessage(err?.message || "No se pudo abrir el comprobante.");
+    }
+  };
+
+  const handleVerFactura = async (ventaId) => {
+    const url = `${API_BASE}/api/ventas/${ventaId}/factura/pdf`;
+    try {
+      await openRemotePdf(url, `factura_${ventaId}.pdf`);
+    } catch (err) {
+      setMessage(err?.message || "No se pudo abrir la factura.");
     }
   };
 
@@ -385,7 +395,10 @@ const PortalPedidos = () => {
                     })()}
                   </div>
 
-                  <div className="pedido-actions" style={{ marginTop: 10 }}>
+                  <div className="pedido-actions" style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    <button type="button" className="link-button" onClick={() => handleVerFactura(pedido.id_venta)}>
+                      Ver factura
+                    </button>
                     {pedido.comprobante_url ? (
                       <button type="button" className="link-button" onClick={() => handleVerComprobante(pedido.id_venta)}>
                         Ver comprobante
