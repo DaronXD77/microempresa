@@ -39,16 +39,16 @@ def create_admin():
     email = (payload.get("email") or "").strip()
     password = payload.get("password") or ""
 
-    if not nombre or not apellido_materno or not email or not password:
-        return jsonify({"error": "Nombre, apellido materno, email y password son requeridos"}), 400
+    if not nombre or not apellido_paterno or not email or not password:
+        return jsonify({"error": "Nombre, apellido paterno, email y password son requeridos"}), 400
 
     if AdminSu.query.filter_by(email=email).first():
         return jsonify({"error": "Email ya registrado"}), 409
 
     admin_user = AdminSu(
         nombre=nombre,
-        apellido_paterno=apellido_paterno or None,
-        apellido_materno=apellido_materno,
+        apellido_paterno=apellido_paterno,
+        apellido_materno=apellido_materno or None,
         email=email,
         password=hash_password(password),
         estado="activo",

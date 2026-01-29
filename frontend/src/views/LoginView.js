@@ -168,14 +168,7 @@ const LoginView = ({
     };
 
     if (mode === "register") {
-      // Exigir microempresa en registro cliente (opción A)
-      if (registerRole === "cliente") {
-        if (!form.tenant_id) {
-          e.preventDefault();
-          alert("Selecciona una microempresa para registrarte.");
-          return;
-        }
-      }
+      // Registro cliente: microempresa es opcional
 
       // Email en minúsculas en registro
       normalizeEmailField("email");
@@ -269,20 +262,20 @@ const LoginView = ({
                     <input name="nombre" value={form.nombre} onChange={onChange} required />
                   </label>
                   <label>
-                    Apellido paterno (opcional)
+                    Apellido paterno
                     <input
                       name="apellido_paterno"
                       value={form.apellido_paterno}
                       onChange={onChange}
+                      required
                     />
                   </label>
                   <label>
-                    Apellido materno
+                    Apellido materno (opcional)
                     <input
                       name="apellido_materno"
                       value={form.apellido_materno}
                       onChange={onChange}
-                      required
                     />
                   </label>
                   <label>
@@ -350,7 +343,7 @@ const LoginView = ({
                   </label>
 
                   <label>
-                    Microempresa
+                    Microempresa (opcional)
                     <div className="select-search">
                       <input
                         placeholder="Buscar microempresa"

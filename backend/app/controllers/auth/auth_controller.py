@@ -142,9 +142,9 @@ def register():
         email = (payload.get("email") or "").strip()
         password = payload.get("password") or ""
 
-        if not all([nombre, apellido_materno, email, password]):
+        if not all([nombre, apellido_paterno, email, password]):
             return (
-                jsonify({"error": "Nombre y apellido materno son requeridos"}),
+                jsonify({"error": "Nombre y apellido paterno son requeridos"}),
                 400,
             )
 
@@ -153,8 +153,8 @@ def register():
 
         admin_user = AdminSu(
             nombre=nombre,
-            apellido_paterno=apellido_paterno or None,
-            apellido_materno=apellido_materno,
+            apellido_paterno=apellido_paterno,
+            apellido_materno=apellido_materno or None,
             email=email,
             password=hash_password(password),
             estado="activo",
