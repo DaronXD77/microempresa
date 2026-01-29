@@ -230,13 +230,24 @@ export default function MicroempresaClientes() {
     const isMobile = typeof window !== "undefined" && window.Capacitor;
     if (isMobile) {
       try {
-        const { Filesystem, Directory } = await import("@capacitor/filesystem");
-        const base64 = btoa(unescape(encodeURIComponent(html)));
+        const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+        try {
+          const perm = await Filesystem.checkPermissions();
+          if (perm?.publicStorage !== "granted") {
+            await Filesystem.requestPermissions();
+          }
+        } catch (e) {
+          // ignore permissions
+        }
+        const hasDownloads = Object.prototype.hasOwnProperty.call(Directory, "Downloads");
+        const targetDirectory = hasDownloads ? Directory.Downloads : Directory.ExternalStorage;
+        const targetPath = hasDownloads ? filename : `Download/${filename}`;
         await Filesystem.writeFile({
-          path: filename,
-          data: base64,
-          directory: Directory.Downloads,
+          path: targetPath,
+          data: html,
+          directory: targetDirectory,
           recursive: true,
+          encoding: Encoding.UTF8,
         });
         setToast({ open: true, message: `Archivo guardado en Descargas: ${filename}`, variant: "success" });
         return;

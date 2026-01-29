@@ -37,6 +37,7 @@ def list_pending_microempresas():
 
     items = []
     for sol, micro, plan in pendientes:
+        tiene_comprobante = bool(sol.comprobante_path)
         items.append(
             {
                 "signup_id": sol.id_solicitud,
@@ -47,8 +48,8 @@ def list_pending_microempresas():
                     "estado": micro.estado,
                 },
                 "plan": plan.to_dict() if plan else None,
-                "tiene_comprobante": bool(sol.comprobante_path),
-                "proof_url": f"/api/onboarding/microempresa/proof/{sol.id_solicitud}",
+                "tiene_comprobante": tiene_comprobante,
+                "proof_url": f"/api/onboarding/microempresa/proof/{sol.id_solicitud}" if tiene_comprobante else None,
                 "creado_en": sol.creado_en.isoformat() if sol.creado_en else None,
             }
         )

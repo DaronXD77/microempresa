@@ -157,8 +157,8 @@ const arrayBufferToBase64 = (buffer) => {
   return btoa(binary);
 };
 
-const downloadBrowser = (buffer, filename) => {
-  const blob = new Blob([buffer], { type: "application/pdf" });
+const downloadBrowser = (payload, filename) => {
+  const blob = payload instanceof Blob ? payload : new Blob([payload], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -172,24 +172,41 @@ const downloadBrowser = (buffer, filename) => {
 export const openPdf = async (doc, filename) => {
   const safeName = filename || "reporte.pdf";
   const data = doc.output("arraybuffer");
+  let blob = null;
+  try {
+    blob = doc.output("blob");
+  } catch (e) {
+    blob = null;
+  }
 
   const handleDownload = async () => {
     if (typeof window !== "undefined" && window.Capacitor) {
       try {
         const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        try {
+          const perm = await Filesystem.checkPermissions();
+          if (perm?.publicStorage !== "granted") {
+            await Filesystem.requestPermissions();
+          }
+        } catch (e) {
+          // ignore permissions
+        }
         const base64 = arrayBufferToBase64(data);
+        const hasDownloads = Object.prototype.hasOwnProperty.call(Directory, "Downloads");
+        const targetDirectory = hasDownloads ? Directory.Downloads : Directory.ExternalStorage;
+        const targetPath = hasDownloads ? safeName : `Download/${safeName}`;
         await Filesystem.writeFile({
-          path: safeName,
+          path: targetPath,
           data: base64,
-          directory: Directory.Downloads,
+          directory: targetDirectory,
           recursive: true,
         });
       } catch (e) {
-        downloadBrowser(data, safeName);
+        downloadBrowser(blob || data, safeName);
       }
       return;
     }
-    downloadBrowser(data, safeName);
+    downloadBrowser(blob || data, safeName);
   };
 
   await openPdfModal(data, safeName, handleDownload);

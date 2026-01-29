@@ -77,7 +77,10 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
     }
     try {
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setToast({ open: true, message: "No se pudo abrir el comprobante.", variant: "warning" });
+        return;
+      }
       const contentType = res.headers.get("content-type") || "";
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -87,7 +90,7 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
         isPdf: contentType.includes("pdf"),
       });
     } catch (e) {
-      // ignore
+      setToast({ open: true, message: "No se pudo abrir el comprobante.", variant: "warning" });
     }
   };
 
@@ -210,13 +213,13 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
                       </div>
                     )}
 
-                    {proofHref ? (
-                      <div style={{ marginTop: 8 }}>
-                        <button type="button" className="ghost-button" onClick={() => openProof(proofHref)}>
-                          Ver comprobante
-                        </button>
-                      </div>
-                    ) : (
+                  {proofHref && it.tiene_comprobante ? (
+                    <div style={{ marginTop: 8 }}>
+                      <button type="button" className="ghost-button" onClick={() => openProof(proofHref)}>
+                        Ver comprobante
+                      </button>
+                    </div>
+                  ) : (
                       <div className="muted" style={{ marginTop: 8 }}>
                         (Sin link de comprobante: el backend debe devolver comprobante_url o proof_url)
                       </div>
