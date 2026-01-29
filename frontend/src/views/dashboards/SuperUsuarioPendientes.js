@@ -61,9 +61,20 @@ export default function SuperUsuarioPendientes({ reloadDashboard }) {
     setPreviewFile(null);
   };
 
+  const isExternalUrl = (url) => {
+    if (!url) return false;
+    if (!url.startsWith("http")) return false;
+    return !url.startsWith((process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, ""));
+  };
+
   const openProof = async (value) => {
     const url = buildProofLink(value);
     if (!url) return;
+    if (isExternalUrl(url)) {
+      const isPdf = url.toLowerCase().includes(".pdf");
+      setPreviewFile({ url, title: "Comprobante", isPdf });
+      return;
+    }
     try {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) return;

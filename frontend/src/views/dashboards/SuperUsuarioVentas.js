@@ -100,9 +100,20 @@ const SuperUsuarioVentas = () => {
     setPreviewFile(null);
   };
 
+  const isExternalUrl = (url) => {
+    if (!url) return false;
+    if (!url.startsWith("http")) return false;
+    return !url.startsWith(API_BASE);
+  };
+
   const openComprobante = async (value) => {
     const url = resolveComprobanteUrl(value);
     if (!url) return;
+    if (isExternalUrl(url)) {
+      const isPdf = url.toLowerCase().includes(".pdf");
+      setPreviewFile({ url, title: "Comprobante", isPdf });
+      return;
+    }
     try {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) return;

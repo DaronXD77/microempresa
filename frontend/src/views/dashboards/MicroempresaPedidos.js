@@ -435,9 +435,20 @@ const MicroempresaPedidos = () => {
     setPreviewFile(null);
   };
 
+  const isExternalUrl = (url) => {
+    if (!url) return false;
+    if (!url.startsWith("http")) return false;
+    return !url.startsWith(API_BASE);
+  };
+
   const handleVerComprobante = async (ventaId) => {
     setMessage("");
     const url = `${API_BASE}/api/ventas/${ventaId}/comprobante/download`;
+    if (isExternalUrl(url)) {
+      const isPdf = url.toLowerCase().includes(".pdf");
+      setPreviewFile({ url, title: "Comprobante", isPdf });
+      return;
+    }
     try {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
