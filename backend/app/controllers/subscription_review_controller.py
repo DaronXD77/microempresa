@@ -1,8 +1,11 @@
 import os
 from datetime import datetime, timedelta
 import os
+import urllib.request
+import urllib.parse
+from io import BytesIO
 
-from flask import Blueprint, jsonify, send_from_directory, request, current_app, redirect
+from flask import Blueprint, jsonify, send_from_directory, request, current_app, send_file
 from flask_login import current_user
 
 from ..extensions import db
@@ -69,7 +72,20 @@ def download_proof(signup_id: int):
 
     raw_path = sol.comprobante_path
     if raw_path.startswith("http://") or raw_path.startswith("https://"):
-        return redirect(raw_path)
+        try:
+            with urllib.request.urlopen(raw_path) as resp:
+                data = resp.read()
+                content_type = resp.headers.get("Content-Type") or "application/octet-stream"
+                parsed = urllib.parse.urlparse(raw_path)
+                filename = os.path.basename(parsed.path) or "comprobante"
+                return send_file(
+                    BytesIO(data),
+                    mimetype=content_type,
+                    download_name=filename,
+                    as_attachment=False,
+                )
+        except Exception:
+            return jsonify({"error": "No hay comprobante"}), 404
 
     path = os.path.normpath(raw_path)
     if not os.path.isabs(path):
