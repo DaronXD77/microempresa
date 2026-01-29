@@ -80,9 +80,22 @@ const openPdfModal = async (data, title, onDownload) => {
   download.style.padding = "8px 14px";
   download.style.fontWeight = "600";
   download.style.cursor = "pointer";
+  const status = document.createElement("div");
+  status.style.fontSize = "13px";
+  status.style.color = "#065f46";
+  status.style.textAlign = "center";
+  status.style.padding = "6px 0";
+  status.style.display = "none";
+
+  const setStatus = (text, tone = "success") => {
+    status.textContent = text;
+    status.style.display = text ? "block" : "none";
+    status.style.color = tone === "warning" ? "#92400e" : "#065f46";
+  };
+
   download.onclick = async () => {
     if (typeof onDownload === "function") {
-      await onDownload();
+      await onDownload(setStatus);
     }
   };
 
@@ -121,6 +134,7 @@ const openPdfModal = async (data, title, onDownload) => {
   card.appendChild(header);
   card.appendChild(loading);
   card.appendChild(pagesWrap);
+  card.appendChild(status);
   card.appendChild(fallback);
   modal.appendChild(card);
   document.body.appendChild(modal);
@@ -157,6 +171,17 @@ const arrayBufferToBase64 = (buffer) => {
   return btoa(binary);
 };
 
+const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    const result = String(reader.result || "");
+    const base64 = result.split(",")[1] || "";
+    resolve(base64);
+  };
+  reader.onerror = reject;
+  reader.readAsDataURL(blob);
+});
+
 const downloadBrowser = (payload, filename) => {
   const blob = payload instanceof Blob ? payload : new Blob([payload], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
@@ -169,45 +194,107 @@ const downloadBrowser = (payload, filename) => {
   URL.revokeObjectURL(url);
 };
 
-export const openPdf = async (doc, filename) => {
-  const safeName = filename || "reporte.pdf";
-  const data = doc.output("arraybuffer");
-  let blob = null;
-  try {
-    blob = doc.output("blob");
-  } catch (e) {
-    blob = null;
-  }
-
-  const handleDownload = async () => {
-    if (typeof window !== "undefined" && window.Capacitor) {
+const buildDownloadHandler = (safeName, base64, blob) => async (setStatus) => {
+  if (typeof window !== "undefined" && window.Capacitor) {
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
       try {
-        const { Filesystem, Directory } = await import("@capacitor/filesystem");
-        try {
-          const perm = await Filesystem.checkPermissions();
-          if (perm?.publicStorage !== "granted") {
-            await Filesystem.requestPermissions();
-          }
-        } catch (e) {
-          // ignore permissions
+        const perm = await Filesystem.checkPermissions();
+        if (perm?.publicStorage !== "granted") {
+          await Filesystem.requestPermissions();
         }
-        const base64 = arrayBufferToBase64(data);
-        const hasDownloads = Object.prototype.hasOwnProperty.call(Directory, "Downloads");
-        const targetDirectory = hasDownloads ? Directory.Downloads : Directory.ExternalStorage;
-        const targetPath = hasDownloads ? safeName : `Download/${safeName}`;
+      } catch (e) {
+        // ignore permissions
+      }
+      const targetDirectory = Directory.ExternalStorage;
+      const targetPath = `Download/${safeName}`;
+      if (setStatus) {
+        setStatus(`Guardando en Descargas: ${targetPath}`);
+      }
+      try {
         await Filesystem.writeFile({
           path: targetPath,
           data: base64,
           directory: targetDirectory,
           recursive: true,
         });
-      } catch (e) {
-        downloadBrowser(blob || data, safeName);
+      } catch (err) {
+        console.error("Filesystem.writeFile error:", err);
+        const msg = err?.message || err?.errorMessage || JSON.stringify(err || {});
+        if (setStatus) {
+          setStatus(`No se pudo guardar: ${msg}`, "warning");
+        }
+        try {
+          const { Browser } = await import("@capacitor/browser");
+          if (setStatus) {
+            setStatus("No se pudo guardar. Abriendo visor externo...", "warning");
+          }
+          const dataUrl = `data:application/pdf;base64,${base64}`;
+          await Browser.open({ url: dataUrl, presentationStyle: "fullscreen" });
+          return;
+        } catch (fallbackErr) {
+          console.error("Fallback open error:", fallbackErr);
+        }
+        throw err;
       }
-      return;
+      if (setStatus) {
+        setStatus(`Guardado en Descargas: ${targetPath}`);
+      }
+      try {
+        const uri = await Filesystem.getUri({
+          path: targetPath,
+          directory: targetDirectory,
+        });
+        if (uri?.uri) {
+          console.log("Archivo guardado:", uri.uri);
+        }
+      } catch (uriErr) {
+        console.warn("Filesystem.getUri error:", uriErr);
+      }
+    } catch (e) {
+      console.error("Download error:", e);
+      const msg = e?.message || e?.errorMessage || JSON.stringify(e || {});
+      if (setStatus) {
+        setStatus(`No se pudo guardar: ${msg}`, "warning");
+      }
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        if (setStatus) {
+          setStatus("No se pudo guardar. Abriendo visor externo...", "warning");
+        }
+        const dataUrl = `data:application/pdf;base64,${base64}`;
+        await Browser.open({ url: dataUrl, presentationStyle: "fullscreen" });
+        return;
+      } catch (fallbackErr) {
+        console.error("Fallback open error:", fallbackErr);
+      }
+      downloadBrowser(blob, safeName);
     }
-    downloadBrowser(blob || data, safeName);
-  };
-
-  await openPdfModal(data, safeName, handleDownload);
+    return;
+  }
+  downloadBrowser(blob, safeName);
 };
+
+export const openPdf = async (doc, filename) => {
+  const safeName = filename || "reporte.pdf";
+  const blob = doc.output("blob");
+  const data = await blob.arrayBuffer();
+  const base64 = await blobToBase64(blob);
+
+  await openPdfModal(data, safeName, buildDownloadHandler(safeName, base64, blob));
+};
+
+export const openRemotePdf = async (url, filename) => {
+  const safeName = filename || "reporte.pdf";
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "No se pudo abrir el PDF.");
+  }
+  const blob = await res.blob();
+  const data = await blob.arrayBuffer();
+  const base64 = await blobToBase64(blob);
+  await openPdfModal(data, safeName, buildDownloadHandler(safeName, base64, blob));
+};
+
+export { openPdf, openRemotePdf };
