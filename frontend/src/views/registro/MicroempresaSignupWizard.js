@@ -200,13 +200,9 @@ export default function MicroempresaSignupWizard() {
       .catch(() => {});
   }, [location.pathname]);
 
-  useEffect(() => {
-    const handleKey = (event) => {
-      if (event.key === "Escape") setQrPreviewOpen(false);
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  const qrSrc = systemQrUrl
+    ? `${resolveAssetUrl(systemQrUrl)}${resolveAssetUrl(systemQrUrl).includes("?") ? "&" : "?"}t=${qrReloadKey}`
+    : "";
 
   useEffect(() => {
     if (!isNewSignup) return;
@@ -757,7 +753,7 @@ export default function MicroempresaSignupWizard() {
                         <div className="qr-card">
                           {systemQrUrl ? (
                             <img
-                              src={`${resolveAssetUrl(systemQrUrl)}${resolveAssetUrl(systemQrUrl).includes("?") ? "&" : "?"}t=${qrReloadKey}`}
+                              src={qrSrc}
                               alt="QR de pago"
                               className="qr-image"
                               onClick={() => setQrPreviewOpen(true)}
@@ -772,6 +768,23 @@ export default function MicroempresaSignupWizard() {
                           )}
                         </div>
                       </div>
+
+                      {qrPreviewOpen && systemQrUrl && (
+                        <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
+                          <div className="image-modal-card" onClick={(event) => event.stopPropagation()}>
+                            <div className="image-modal-title">QR de pago</div>
+                            <button
+                              type="button"
+                              className="image-modal-close"
+                              onClick={() => setQrPreviewOpen(false)}
+                              aria-label="Cerrar"
+                            >
+                              ×
+                            </button>
+                            <img src={qrSrc} alt="QR de pago" />
+                          </div>
+                        </div>
+                      )}
 
                       <form className="microempresa-form" onSubmit={handleSubmitPayment}>
                         <label>
@@ -814,37 +827,19 @@ export default function MicroempresaSignupWizard() {
           }
         />
 
-        {qrPreviewOpen && systemQrUrl && (
-          <div className="image-modal" onClick={() => setQrPreviewOpen(false)}>
-            <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
-              <div className="image-modal-title">QR de pago</div>
-              <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)} aria-label="Cerrar">
-                ×
-              </button>
-              {qrPreviewError ? (
-                <div className="muted" style={{ display: "grid", gap: 8, minHeight: 160 }}>
-                  <span>No se pudo cargar el QR.</span>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => {
-                      setQrPreviewError(false);
-                      setQrReloadKey((v) => v + 1);
-                    }}
-                  >
-                    Reintentar
-                  </button>
-                </div>
-              ) : (
-                <img
-                  src={`${resolveAssetUrl(systemQrUrl)}${resolveAssetUrl(systemQrUrl).includes("?") ? "&" : "?"}t=${qrReloadKey}`}
-                  alt="QR de pago"
-                  style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}
-                  onError={() => setQrPreviewError(true)}
-                  referrerPolicy="no-referrer"
-                />
-              )}
-            </div>
+        {qrPreviewError && (
+          <div className="muted" style={{ marginTop: 10, display: "grid", gap: 8 }}>
+            <span>No se pudo cargar el QR.</span>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                setQrPreviewError(false);
+                setQrReloadKey((v) => v + 1);
+              }}
+            >
+              Reintentar
+            </button>
           </div>
         )}
 
