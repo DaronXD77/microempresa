@@ -9,7 +9,7 @@ import { resolveAssetUrl } from "../../utils/url";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { openPdf } from "../../utils/pdf";
+import { openPdf, openRemotePdf } from "../../utils/pdf";
 import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
@@ -118,6 +118,15 @@ const MicroempresaVentas = () => {
       });
     } catch (err) {
       setMessage(err?.message || "No se pudo abrir el comprobante.");
+    }
+  };
+
+  const handleVerFactura = async (ventaId) => {
+    const url = `${API_BASE}/api/ventas/${ventaId}/factura/pdf`;
+    try {
+      await openRemotePdf(url, `factura_${ventaId}.pdf`);
+    } catch (err) {
+      setMessage(err?.message || "No se pudo abrir la factura.");
     }
   };
 
@@ -394,16 +403,24 @@ const MicroempresaVentas = () => {
               </div>
               <div>{formatMoney(selectedVenta.total || 0)}</div>
               <div>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => handleVerFactura(selectedVenta.id_venta)}
+                >
+                  Ver factura
+                </button>
                 {selectedVenta.comprobante_url ? (
                   <button
                     type="button"
                     className="link-button"
                     onClick={() => openComprobante(selectedVenta.comprobante_url)}
+                    style={{ marginLeft: 8 }}
                   >
-                    Ver
+                    Ver comprobante
                   </button>
                 ) : (
-                  <span className="muted">-</span>
+                  <span className="muted" style={{ marginLeft: 8 }}>-</span>
                 )}
               </div>
             </div>
