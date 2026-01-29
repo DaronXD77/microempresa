@@ -2503,6 +2503,7 @@ select {
   position: relative;
   max-height: 85vh;
   overflow: auto;
+  background: #fff;
 }
 
 .image-modal-title {
@@ -2516,6 +2517,7 @@ select {
   max-height: 70vh;
   border-radius: 12px;
   object-fit: contain;
+  background: #fff;
 }
 
 .image-modal-frame {

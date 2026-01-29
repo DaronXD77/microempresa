@@ -128,6 +128,7 @@ export default function MicroempresaSignupWizard() {
   const [status, setStatus] = useState(null);
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
   const [systemQrUrl, setSystemQrUrl] = useState("");
+  const [qrPreviewError, setQrPreviewError] = useState(false);
   const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
 
   const onChange = (e) => {
@@ -760,6 +761,7 @@ export default function MicroempresaSignupWizard() {
                               className="qr-image"
                               onClick={() => setQrPreviewOpen(true)}
                               onError={(e) => {
+                                setQrPreviewError(true);
                                 e.currentTarget.alt = "QR no disponible";
                               }}
                             />
@@ -817,7 +819,15 @@ export default function MicroempresaSignupWizard() {
               <button type="button" className="image-modal-close" onClick={() => setQrPreviewOpen(false)} aria-label="Cerrar">
                 ×
               </button>
-              <img src={resolveAssetUrl(systemQrUrl)} alt="QR de pago" />
+              {qrPreviewError ? (
+                <div className="muted">No se pudo cargar el QR.</div>
+              ) : (
+                <img
+                  src={resolveAssetUrl(systemQrUrl)}
+                  alt="QR de pago"
+                  onError={() => setQrPreviewError(true)}
+                />
+              )}
             </div>
           </div>
         )}

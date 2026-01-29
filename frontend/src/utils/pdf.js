@@ -94,9 +94,17 @@ const openPdfModal = (src, title, revokeUrl = null) => {
   document.body.appendChild(modal);
 };
 
-export const openPdf = (doc, filename) => {
+export const openPdf = async (doc, filename) => {
   try {
     if (isMobileLike()) {
+      if (window.Capacitor) {
+        const { Browser } = await import("@capacitor/browser");
+        const dataUrl = doc.output("datauristring");
+        if (dataUrl) {
+          await Browser.open({ url: dataUrl });
+          return;
+        }
+      }
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       openPdfModal(url, filename || "Reporte", url);
