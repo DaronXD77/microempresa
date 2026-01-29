@@ -6,7 +6,7 @@ import { fetchMe } from "../../controllers/authController";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { openPdf } from "../../utils/pdf";
+import { openPdf, openRemotePdf } from "../../utils/pdf";
 import { formatDateTimeLaPaz, formatDateTimeLaPazShort } from "../../utils/date";
 
 // Formatea fechas de forma consistente
@@ -89,16 +89,11 @@ const MicroempresaHistorialCompras = () => {
   const openDetallePdf = async () => {
     if (!selected?.id_compra) return;
     const url = `${API_BASE}/api/compras/${selected.id_compra}/pdf`;
-    if (typeof window !== "undefined" && window.Capacitor) {
-      try {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url, presentationStyle: "fullscreen" });
-        return;
-      } catch (e) {
-        // fallback to web open
-      }
+    try {
+      await openRemotePdf(url, `compra_${selected.id_compra}.pdf`);
+    } catch (e) {
+      console.error(e);
     }
-    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   // Devuelve una URL de logo si existe en el objeto micro
@@ -330,7 +325,7 @@ const MicroempresaHistorialCompras = () => {
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
               <button type="button" className="primary-button" onClick={openDetallePdf}>
-                Descargar PDF
+                Ver PDF
               </button>
               <button type="button" className="ghost-button" onClick={closeDetalle} disabled={detalleLoading}>
                 {detalleLoading ? "Cargando..." : "Cerrar"}

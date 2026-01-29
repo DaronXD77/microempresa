@@ -121,6 +121,29 @@ const PortalPedidos = () => {
     return toEmbed(raw);
   };
 
+  const isVirtualDireccion = (value) => {
+    const text = String(value || "").toLowerCase();
+    return text.includes("virtual") || text.includes("sin tienda");
+  };
+
+  const isPhysicalStore = (pedido) => {
+    const tipo = String(pedido?.microempresa_tipo || "").toLowerCase();
+    if (tipo === "fisica") return true;
+    if (tipo === "virtual") return false;
+    const direccion = String(pedido?.microempresa_direccion || "");
+    return direccion && !isVirtualDireccion(direccion);
+  };
+
+  const hasMapsLink = (pedido) => {
+    const direccion = String(pedido?.microempresa_direccion || "").trim();
+    return Boolean(direccion && direccion.startsWith("http"));
+  };
+
+  const shouldShowLocalMap = (pedido) =>
+    isPhysicalStore(pedido)
+    && hasMapsLink(pedido)
+    && String(pedido?.microempresa_horario || "").trim();
+
   const renderTracker = (estado) => {
     if (estado === "rechazado") {
       return (
@@ -344,22 +367,35 @@ const PortalPedidos = () => {
                     )}
                   </div>
 
-                  <div className="card" style={{ boxShadow: "none", marginTop: 10 }}>
-                    <div className="form-title">Contacto de la microempresa</div>
-                    <div className="muted">Email: {pedido.microempresa_email || "-"}</div>
-                    <div className="muted">Celular: {pedido.microempresa_telefono || "-"}</div>
-                    <div className="muted">Direccion: {pedido.microempresa_direccion || "Tienda virtual"}</div>
-                    {pedido.microempresa_direccion ? (
-                      <iframe
-                        title={`map-${pedido.id_venta}`}
-                        src={buildEmbedSrcFromQuery(pedido.microempresa_direccion)}
-                        width="100%"
-                        height="200"
-                        style={{ border: 0, borderRadius: 10, marginTop: 8 }}
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
-                    ) : null}
+                    <div className="card" style={{ boxShadow: "none", marginTop: 10 }}>
+                      <div className="form-title">Contacto de la microempresa</div>
+                      <div className="muted">Email: {pedido.microempresa_email || "-"}</div>
+                      <div className="muted">Celular: {pedido.microempresa_telefono || "-"}</div>
+                      <div className="muted">
+                        Direccion: {isPhysicalStore(pedido)
+                          ? pedido.microempresa_direccion || "-"
+                          : "Tienda virtual"}
+                      </div>
+                      {isPhysicalStore(pedido) && pedido.microempresa_horario && (
+                        <div className="muted">Horario: {pedido.microempresa_horario}</div>
+                      )}
+                      {shouldShowLocalMap(pedido) ? (
+                        <iframe
+                          title={`map-${pedido.id_venta}`}
+                          src={buildEmbedSrcFromQuery(pedido.microempresa_direccion)}
+                          width="100%"
+                          height="200"
+                          style={{ border: 0, borderRadius: 10, marginTop: 8 }}
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                      ) : null}
+                      {isPhysicalStore(pedido) && (
+                        <div className="muted" style={{ marginTop: 8 }}>
+                          Puedes elegir un lugar y horario de entrega (segun las opciones asignadas por la microempresa o empleado)
+                          o pasar a recoger al local en el horario y lugar establecidos.
+                        </div>
+                      )}
                   </div>
                 </div>
               ))

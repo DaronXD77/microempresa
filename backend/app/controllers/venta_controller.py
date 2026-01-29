@@ -137,6 +137,8 @@ def _serialize_venta(venta: Venta, tenant_map=None):
             data["microempresa_estado"] = micro.estado
             data["microempresa_direccion"] = micro.direccion
             data["microempresa_telefono"] = micro.telefono_contacto
+            data["microempresa_horario"] = micro.horario_atencion
+            data["microempresa_tipo"] = micro.tipo_tienda
     return data
 
 
@@ -725,6 +727,9 @@ def marcar_entregado(venta_id):
             if datetime.utcnow() < disponible:
                 remaining = max(1, int((disponible - datetime.utcnow()).total_seconds() // 60) + 1)
                 return jsonify({"error": f"Debes esperar {remaining} min antes de marcar entregado"}), 400
+
+    if venta.estado not in {"empaquetado", "entregado"}:
+        _adjust_stock(venta.detalles, venta.tenant_id, -1)
 
     venta.estado = "entregado"
     if entrega:

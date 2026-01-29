@@ -219,8 +219,8 @@ const MicroempresaProveedores = () => {
           {filtered.length === 0 ? (
             <p className="muted">No hay proveedores.</p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860, tableLayout: "fixed" }}>
+            <div className="proveedores-table-wrap">
+              <table className="proveedores-table">
                 <thead>
                   <tr>
                     <th style={{ textAlign: "center", padding: "10px 12px" }}>Nombre</th>
@@ -251,9 +251,9 @@ const MicroempresaProveedores = () => {
                                 {proveedor.estado}
                               </span>
                             </td>
-                            <td style={{ textAlign: "center", padding: "10px 12px" }}>
-                              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                                <button type="button" onClick={() => startEdit(proveedor)}>
+                            <td className="proveedores-actions-cell">
+                              <div className="proveedores-actions">
+                                <button type="button" className="ghost-button" onClick={() => startEdit(proveedor)}>
                                   Editar
                                 </button>
                                 <button
@@ -291,8 +291,8 @@ const MicroempresaProveedores = () => {
                                 {proveedor.estado}
                               </span>
                             </td>
-                            <td style={{ textAlign: "center", padding: "10px 12px" }}>
-                              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                            <td className="proveedores-actions-cell">
+                              <div className="proveedores-actions">
                                 <button type="button" onClick={() => saveEdit(proveedor)}>
                                   Guardar
                                 </button>

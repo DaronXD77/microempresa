@@ -505,7 +505,7 @@ const MicroempresaProductos = () => {
                 <div>Proveedor</div>
                 <div>Precio venta</div>
                 <div>Precio compra</div>
-                <div>Stock (Inicial / Actual / Vendidas)</div>
+                <div>Stock (Inicial / Actual)</div>
                 <div>Stock minimo</div>
                 <div>Estado</div>
                 <div>Categorias</div>
@@ -527,7 +527,6 @@ const MicroempresaProductos = () => {
                   : producto.nombre || "-";
                 const stockInicial = producto.stock_inicial ?? producto.stock ?? 0;
                 const stockActual = producto.stock ?? 0;
-                const vendidas = Math.max(0, stockInicial - stockActual);
                 return (
                   <div key={producto.id_producto} className="producto-table-row">
                     <div className="producto-table-cell">
@@ -537,7 +536,7 @@ const MicroempresaProductos = () => {
                     <div className="producto-table-cell">Bs {producto.precio_unitario}</div>
                     <div className="producto-table-cell">Bs {Number(producto.precio_compra || 0).toFixed(2)}</div>
                     <div className="producto-table-cell">
-                      {`Ini: ${stockInicial} | Act: ${stockActual} | Vend: ${vendidas}`}
+                      {`Ini: ${stockInicial} | Act: ${stockActual}`}
                     </div>
                     <div className="producto-table-cell">{producto.stock_minimo}</div>
                     <div className="producto-table-cell">

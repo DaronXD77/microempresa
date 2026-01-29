@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { resolveAssetUrl } from "../utils/url";
 
@@ -66,7 +67,9 @@ const DashboardLayout = ({
   themeClass,
 }) => {
   const location = useLocation();
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
+  const isMobile = typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(max-width: 900px)").matches
+    : false;
 
   /**
    * Título dinámico basado en la ruta actual.
@@ -82,9 +85,22 @@ const DashboardLayout = ({
   const switchRoles = availableRoles.filter((role) => role !== currentRole);
 
   const closeMobileNav = () => {
-    if (!isMobile) return;
+    if (typeof window === "undefined") return;
+    const shouldClose = window.matchMedia
+      ? window.matchMedia("(max-width: 900px)").matches
+      : window.innerWidth < 900;
+    if (!shouldClose) return;
     setSidebarCollapsed(true);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const shouldClose = window.matchMedia
+      ? window.matchMedia("(max-width: 900px)").matches
+      : window.innerWidth < 900;
+    if (!shouldClose) return;
+    setSidebarCollapsed(true);
+  }, [location.pathname]);
 
   return (
     <div className={`app-shell ${!sidebarCollapsed ? "nav-open" : ""} ${themeClass || ""}`.trim()}>

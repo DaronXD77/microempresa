@@ -813,6 +813,49 @@ select {
   border-bottom: 1px solid #eef0f3;
 }
 
+.proveedores-table-wrap {
+  overflow-x: auto;
+}
+
+.proveedores-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  table-layout: fixed;
+}
+
+.proveedores-table th,
+.proveedores-table td {
+  text-align: center;
+  padding: 10px 12px;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.proveedores-table th {
+  background: #f8fafc;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.proveedores-actions-cell {
+  white-space: normal;
+}
+
+.proveedores-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.proveedores-table td input {
+  width: 100%;
+  min-width: 140px;
+}
+
 .producto-table {
   display: grid;
   gap: 12px;

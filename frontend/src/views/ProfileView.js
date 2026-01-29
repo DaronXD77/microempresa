@@ -86,6 +86,7 @@ const ProfileView = ({ role, form, message, onChange, onSubmit, isSaving, forceP
             value={form.telefono_contacto}
             onChange={onChange}
             placeholder="8 digitos"
+            required={form.tipo_tienda === "fisica"}
           />
         </label>
 
@@ -93,8 +94,15 @@ const ProfileView = ({ role, form, message, onChange, onSubmit, isSaving, forceP
         {form.tipo_tienda === "fisica" ? (
           <>
             <label>
-              Dirección
-              <input name="direccion" value={form.direccion} onChange={onChange} />
+              Link de Maps
+              <input
+                name="direccion"
+                type="url"
+                value={form.direccion}
+                onChange={onChange}
+                placeholder="https://maps.google.com/..."
+                required
+              />
             </label>
 
             <label>
