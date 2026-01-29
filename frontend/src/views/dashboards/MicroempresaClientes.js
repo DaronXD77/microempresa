@@ -5,6 +5,7 @@ import ToastModal from "../ToastModal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -478,7 +479,7 @@ export default function MicroempresaClientes() {
       const marginX = 24;
 
       // Encabezado simple (mismo estilo general de tus reportes anteriores)
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);

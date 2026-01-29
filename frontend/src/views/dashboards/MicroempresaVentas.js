@@ -10,6 +10,7 @@ import { resolveAssetUrl } from "../../utils/url";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -251,7 +252,7 @@ const MicroempresaVentas = () => {
       doc.text(titulo, logoDrawn ? marginX + 78 : marginX, y + 40);
 
       doc.setFontSize(10);
-      const fechaGen = new Date().toLocaleString();
+      const fechaGen = formatDateTimeLaPaz();
       doc.text(`Generado: ${fechaGen}`, logoDrawn ? marginX + 78 : marginX, y + 58);
 
       y = y + 90;
@@ -305,7 +306,7 @@ const MicroempresaVentas = () => {
 
       // Tabla de ventas
       const rows = (mesActual.ventas || []).map((v) => {
-        const fecha = v?.created_at ? new Date(v.created_at).toLocaleString() : "-";
+        const fecha = v?.created_at ? formatDateTimeLaPaz(v.created_at) : "-";
         const cliente = v?.cliente_nombre || v?.cliente_email || "Sin cliente";
         const metodo = v?.metodo_pago || "-";
         const estado = v?.estado_envio || v?.estado || "-";
@@ -378,7 +379,7 @@ const MicroempresaVentas = () => {
             </div>
             <div className="ventas-row ventas-7">
               <div>
-                {selectedVenta.created_at ? new Date(selectedVenta.created_at).toLocaleString() : "-"}
+                {selectedVenta.created_at ? formatDateTimeLaPaz(selectedVenta.created_at) : "-"}
               </div>
               <div>{selectedVenta.tipo}</div>
               <div>
@@ -614,7 +615,7 @@ const MicroempresaVentas = () => {
           ) : (
             mesActual.ventas.map((venta) => (
               <div key={venta.id_venta} className="ventas-row ventas-7">
-                <div>{venta.created_at ? new Date(venta.created_at).toLocaleString() : "-"}</div>
+                <div>{venta.created_at ? formatDateTimeLaPaz(venta.created_at) : "-"}</div>
                 <div>{venta.tipo}</div>
                 <div>{venta.cliente_nombre || venta.cliente_email || "Sin cliente"}</div>
                 <div>{venta.metodo_pago}</div>

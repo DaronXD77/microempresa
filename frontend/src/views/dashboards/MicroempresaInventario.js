@@ -11,6 +11,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { resolveAssetUrl } from "../../utils/url";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -162,7 +163,7 @@ const MicroempresaInventario = () => {
     try {
       const rowsSource = visible; // respeta filtros (proveedor + búsqueda)
       const empresaNombre = micro?.razon_social || micro?.nombre || micro?.name || "Microempresa";
-      const generado = new Date().toLocaleString();
+      const generado = formatDateTimeLaPaz();
 
       // Resumen
       const totalProductos = rowsSource.length;

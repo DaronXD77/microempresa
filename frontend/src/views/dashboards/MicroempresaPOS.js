@@ -347,6 +347,10 @@ const MicroempresaPOS = () => {
     );
   });
 
+  const selectedCliente = selectedClienteId
+    ? clientes.find((c) => String(c.id || c.id_cliente) === String(selectedClienteId))
+    : null;
+
   const handleSelectCliente = (value) => {
     setSelectedClienteId(value);
     if (!value) {
@@ -520,7 +524,7 @@ const MicroempresaPOS = () => {
                 <option value="empresa">Empresa</option>
               </select>
               <input
-                placeholder="Buscar por CI"
+                placeholder="Buscar por CI o email"
                 value={clienteSearch}
                 onChange={(e) => setClienteSearch(e.target.value)}
               />
@@ -531,11 +535,16 @@ const MicroempresaPOS = () => {
                 <option value="">Cliente existente</option>
                 {filteredClientes.map((c) => (
                   <option key={c.id || c.id_cliente} value={c.id || c.id_cliente}>
-                    {buildFullName(c) || c.nombre} - {c.ci || "-"}
+                    {(buildFullName(c) || c.nombre) + ` | CI: ${c.ci || "-"} | ${c.email || "-"}`}
                   </option>
                 ))}
               </select>
             </div>
+            {selectedCliente && (
+              <div className="muted" style={{ marginTop: 6 }}>
+                Seleccionado: {(buildFullName(selectedCliente) || selectedCliente.nombre)} · CI: {selectedCliente.ci || "-"} · {selectedCliente.email || "-"}
+              </div>
+            )}
             <div className="pos-client-grid">
               <input
                 placeholder="CI (presiona Enter)"

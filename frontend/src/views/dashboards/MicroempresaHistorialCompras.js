@@ -7,19 +7,14 @@ import { fetchMe } from "../../controllers/authController";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz, formatDateTimeLaPazShort } from "../../utils/date";
 
 // Formatea fechas de forma consistente
 const formatFecha = (value) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString("es-ES", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeLaPazShort(date);
 };
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
@@ -91,6 +86,21 @@ const MicroempresaHistorialCompras = () => {
   // Cierra el modal de detalle
   const closeDetalle = () => setSelected(null);
 
+  const openDetallePdf = async () => {
+    if (!selected?.id_compra) return;
+    const url = `${API_BASE}/api/compras/${selected.id_compra}/pdf`;
+    if (typeof window !== "undefined" && window.Capacitor) {
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url, presentationStyle: "fullscreen" });
+        return;
+      } catch (e) {
+        // fallback to web open
+      }
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   // Devuelve una URL de logo si existe en el objeto micro
   const getMicroLogoUrl = () => {
     const raw =
@@ -123,7 +133,7 @@ const MicroempresaHistorialCompras = () => {
 
       // Datos de cabecera
       const empresaNombre = micro?.razon_social || micro?.nombre || micro?.name || "Microempresa";
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       // Resumen simple
       const resumen = rowsSource.reduce(
@@ -318,9 +328,14 @@ const MicroempresaHistorialCompras = () => {
               )}
             </div>
 
-            <button type="button" className="ghost-button" onClick={closeDetalle} disabled={detalleLoading}>
-              {detalleLoading ? "Cargando..." : "Cerrar"}
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              <button type="button" className="primary-button" onClick={openDetallePdf}>
+                Descargar PDF
+              </button>
+              <button type="button" className="ghost-button" onClick={closeDetalle} disabled={detalleLoading}>
+                {detalleLoading ? "Cargando..." : "Cerrar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

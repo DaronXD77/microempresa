@@ -4,6 +4,7 @@ import SectionCard from "../SectionCard";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const prettyTipo = (t) => {
   const v = String(t || "").toLowerCase();
@@ -41,7 +42,7 @@ const SuperUsuarioMicroempresas = ({ items, onDeactivate, onActivate }) => {
       const marginX = 40;
 
 
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);

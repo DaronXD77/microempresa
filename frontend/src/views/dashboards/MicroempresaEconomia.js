@@ -8,6 +8,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { resolveAssetUrl } from "../../utils/url";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -18,6 +19,8 @@ const formatSaldo = (value) => {
   const abs = Math.abs(numeric).toFixed(2);
   return `${sign}Bs ${abs}`;
 };
+
+const formatMoney = (value) => `Bs ${Number(value || 0).toFixed(2)}`;
 
 // Resuelve rutas relativas a URL absoluta usando API_BASE
 const resolveUrl = (value) => {
@@ -84,8 +87,10 @@ const MicroempresaEconomia = () => {
   };
 
   // Calcula un estado textual a partir del saldo
-  const getEstadoFromSaldo = (saldo) => {
+  const getEstadoFromSaldo = (saldo, vendido) => {
     const s = Number(saldo || 0);
+    const v = Number(vendido || 0);
+    if (v <= 0) return "Sin ventas";
     if (s < 0) return "Recuperando";
     if (s > 0) return "Ganancia";
     return "Recuperado";
@@ -97,41 +102,52 @@ const MicroempresaEconomia = () => {
       const rowsSource = visible;
 
       // Resumen general (acumulados)
-      const resumen = rowsSource.reduce(
-        (acc, it) => {
-          const saldo = Number(it.saldo || 0);
-          const stock = Number(it.stock ?? 0);
-          const compra = Number(it.precio_compra || 0);
-          const venta = Number(it.precio_unitario || 0);
+       const resumen = rowsSource.reduce(
+         (acc, it) => {
+           const saldo = Number(it.saldo || 0);
+           const stock = Number(it.stock ?? 0);
+           const compra = Number(it.precio_compra || 0);
+           const venta = Number(it.precio_unitario || 0);
+           const vendido = Number(it.vendido || 0);
+           const ingresos = Number(it.ingresos || 0);
+           const costoVentas = Number(it.costo_invertido || 0);
+           const costoInventario = Number(it.costo_inventario || 0);
 
-          acc.productos += 1;
-          acc.stockTotal += stock;
+           acc.productos += 1;
+           acc.stockTotal += stock;
+           acc.vendidoTotal += vendido;
+           acc.ingresos += ingresos;
+           acc.costoVentas += costoVentas;
+           acc.costoInventario += costoInventario;
 
-          // Suma saldos por categorías
-          if (saldo < 0) acc.recuperando += 1;
-          else if (saldo > 0) acc.ganancia += 1;
-          else acc.recuperado += 1;
+           const estado = getEstadoFromSaldo(saldo, vendido);
+           if (estado === "Recuperando") acc.recuperando += 1;
+           else if (estado === "Ganancia") acc.ganancia += 1;
+           else if (estado === "Recuperado") acc.recuperado += 1;
+           else acc.sinVentas += 1;
 
-          // Totales económicos estimados (stock actual)
-          acc.valorCompra += stock * compra;
-          acc.valorVenta += stock * venta;
+           acc.valorCompra += stock * compra;
+           acc.valorVenta += stock * venta;
+           acc.saldoNeto += saldo;
 
-          // Saldo neto (sumatoria del saldo por producto)
-          acc.saldoNeto += saldo;
-
-          return acc;
-        },
-        {
-          productos: 0,
-          stockTotal: 0,
-          recuperando: 0,
-          ganancia: 0,
-          recuperado: 0,
-          valorCompra: 0,
-          valorVenta: 0,
-          saldoNeto: 0,
-        }
-      );
+           return acc;
+         },
+         {
+           productos: 0,
+           stockTotal: 0,
+           vendidoTotal: 0,
+           recuperando: 0,
+           ganancia: 0,
+           recuperado: 0,
+           sinVentas: 0,
+           valorCompra: 0,
+           valorVenta: 0,
+           ingresos: 0,
+           costoVentas: 0,
+           costoInventario: 0,
+           saldoNeto: 0,
+         }
+       );
 
       // Configuración PDF
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
@@ -141,7 +157,7 @@ const MicroempresaEconomia = () => {
 
       // Encabezado
       const empresaNombre = micro?.razon_social || micro?.nombre || micro?.name || "Microempresa";
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 28;
       const logoUrl = getMicroLogoUrl();
@@ -171,39 +187,43 @@ const MicroempresaEconomia = () => {
       y += 74;
 
       // Resumen en una o dos líneas
-      doc.setFontSize(11);
-      doc.text(
-        `Productos: ${resumen.productos}   |   Stock total: ${resumen.stockTotal}   |   Recuperando: ${resumen.recuperando}   |   Ganancia: ${resumen.ganancia}   |   Recuperado: ${resumen.recuperado}`,
-        marginX,
-        y
-      );
-      y += 14;
+       doc.setFontSize(11);
+       doc.text(
+         `Productos: ${resumen.productos}   |   Stock: ${resumen.stockTotal}   |   Vendido: ${resumen.vendidoTotal}   |   Sin ventas: ${resumen.sinVentas}`,
+         marginX,
+         y
+       );
+       y += 14;
 
-      doc.setFontSize(10);
-      doc.text(
-        `Valor compra (estim): Bs ${resumen.valorCompra.toFixed(2)}   |   Valor venta (estim): Bs ${resumen.valorVenta.toFixed(
-          2
-        )}   |   Saldo neto: ${formatSaldo(resumen.saldoNeto)}`,
-        marginX,
-        y
-      );
+       doc.setFontSize(10);
+       doc.text(
+         `Ingresos: ${formatMoney(resumen.ingresos)}   |   Costo ventas: ${formatMoney(resumen.costoVentas)}   |   Saldo neto: ${formatSaldo(resumen.saldoNeto)}`,
+         marginX,
+         y
+       );
 
       // Prepara tabla
-      const body = rowsSource.map((it) => {
-        const stock = Number(it.stock ?? 0);
-        const compra = Number(it.precio_compra || 0);
-        const venta = Number(it.precio_unitario || 0);
-        const saldo = Number(it.saldo || 0);
+       const body = rowsSource.map((it) => {
+         const stock = Number(it.stock ?? 0);
+         const compra = Number(it.precio_compra || 0);
+         const venta = Number(it.precio_unitario || 0);
+         const saldo = Number(it.saldo || 0);
+         const vendido = Number(it.vendido || 0);
+         const ingresos = Number(it.ingresos || 0);
+         const costoVentas = Number(it.costo_invertido || 0);
 
-        return [
-          String(it.nombre || "-"),
-          String(stock),
-          `Bs ${compra.toFixed(2)}`,
-          `Bs ${venta.toFixed(2)}`,
-          formatSaldo(saldo),
-          getEstadoFromSaldo(saldo),
-        ];
-      });
+         return [
+           String(it.nombre || "-"),
+           String(stock),
+           `Bs ${compra.toFixed(2)}`,
+           `Bs ${venta.toFixed(2)}`,
+           String(vendido),
+           formatMoney(ingresos),
+           formatMoney(costoVentas),
+           formatSaldo(saldo),
+           getEstadoFromSaldo(saldo, vendido),
+         ];
+       });
 
       // Tabla con ajuste automático para evitar recortes
       autoTable(doc, {
@@ -218,15 +238,18 @@ const MicroempresaEconomia = () => {
         headStyles: {
           fontSize: 8,
         },
-        head: [["Producto", "Stock", "Precio compra", "Precio venta", "Saldo", "Estado"]],
+        head: [["Producto", "Stock", "Precio compra", "Precio venta", "Vendido", "Ingresos", "Costo", "Saldo", "Estado"]],
         body,
         columnStyles: {
-          0: { cellWidth: 260 },
-          1: { cellWidth: 55, halign: "right" },
-          2: { cellWidth: 95, halign: "right" },
-          3: { cellWidth: 95, halign: "right" },
-          4: { cellWidth: 95, halign: "right" },
-          5: { cellWidth: 110 },
+          0: { cellWidth: 210 },
+          1: { cellWidth: 50, halign: "right" },
+          2: { cellWidth: 85, halign: "right" },
+          3: { cellWidth: 85, halign: "right" },
+          4: { cellWidth: 60, halign: "right" },
+          5: { cellWidth: 90, halign: "right" },
+          6: { cellWidth: 85, halign: "right" },
+          7: { cellWidth: 85, halign: "right" },
+          8: { cellWidth: 95 },
         },
         didDrawPage: () => {
           const pageCount = doc.internal.getNumberOfPages();
@@ -262,6 +285,13 @@ const MicroempresaEconomia = () => {
           </div>
         </div>
 
+        <div className="card" style={{ marginTop: 12, background: "#f9fafb" }}>
+          <div className="muted">
+            Este panel calcula ingresos solo de ventas pagadas/empaquetadas/entregadas. Si no hubo ventas, el estado es
+            "Sin ventas". El saldo = ingresos - costo de productos vendidos.
+          </div>
+        </div>
+
         <div className="inventario-table" style={{ marginTop: 12 }}>
           <div className="inventario-row head">
             <div>Foto</div>
@@ -269,6 +299,9 @@ const MicroempresaEconomia = () => {
             <div>Stock</div>
             <div>Precio compra</div>
             <div>Precio venta</div>
+            <div>Vendido</div>
+            <div>Ingresos</div>
+            <div>Costo</div>
             <div>Saldo</div>
             <div>Estado</div>
           </div>
@@ -278,8 +311,11 @@ const MicroempresaEconomia = () => {
           ) : (
             visible.map((item) => {
               const saldo = Number(item.saldo || 0);
-              const color = saldo < 0 ? "#c0392b" : saldo > 0 ? "#1f8b4c" : "#6b7280";
-              const estado = getEstadoFromSaldo(saldo);
+              const vendido = Number(item.vendido || 0);
+              const ingresos = Number(item.ingresos || 0);
+              const costoVentas = Number(item.costo_invertido || 0);
+              const estado = getEstadoFromSaldo(saldo, vendido);
+              const color = estado === "Ganancia" ? "#1f8b4c" : estado === "Recuperando" ? "#c0392b" : "#6b7280";
 
               return (
                 <div key={item.id_producto} className="inventario-row">
@@ -296,8 +332,11 @@ const MicroempresaEconomia = () => {
                   </div>
                   <div>{item.nombre || "-"}</div>
                   <div>{item.stock ?? 0}</div>
-                  <div>Bs {Number(item.precio_compra || 0).toFixed(2)}</div>
-                  <div>Bs {Number(item.precio_unitario || 0).toFixed(2)}</div>
+                  <div>{formatMoney(item.precio_compra || 0)}</div>
+                  <div>{formatMoney(item.precio_unitario || 0)}</div>
+                  <div>{vendido}</div>
+                  <div>{formatMoney(ingresos)}</div>
+                  <div>{formatMoney(costoVentas)}</div>
                   <div style={{ color, fontWeight: 600 }}>{formatSaldo(saldo)}</div>
                   <div>
                     <span className="status-pill" style={{ background: color, color: "#fff" }}>

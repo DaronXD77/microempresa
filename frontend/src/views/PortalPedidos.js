@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { cancelarVenta, fetchMisPedidos, marcarEntregado, seleccionarEntrega } from "../controllers/ventaController";
 import ToastModal from "./ToastModal";
+import { formatDateTimeLaPaz } from "../utils/date";
 
 const PortalPedidos = () => {
   const [pedidos, setPedidos] = useState([]);
@@ -93,10 +94,31 @@ const PortalPedidos = () => {
     await load();
   };
 
-  const buildEmbedSrcFromQuery = (query) => {
-    const q = String(query || "").trim();
-    if (!q) return "";
-    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  const buildEmbedSrcFromQuery = (value, fallbackText = "") => {
+    const raw = String(value || "").trim();
+    const fallback = String(fallbackText || "").trim();
+    const toEmbed = (query) => `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    if (!raw && fallback) return toEmbed(fallback);
+    if (!raw) return "";
+    if (raw.startsWith("http")) {
+      try {
+        const url = new URL(raw);
+        const q = url.searchParams.get("q") || url.searchParams.get("query");
+        if (q) return toEmbed(q);
+        const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
+        if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
+        if (url.hostname.includes("google.com") && url.pathname.startsWith("/maps")) {
+          const withEmbed = raw.includes("output=embed")
+            ? raw
+            : `${raw}${raw.includes("?") ? "&" : "?"}output=embed`;
+          return withEmbed;
+        }
+      } catch {
+        // ignore
+      }
+      return fallback ? toEmbed(fallback) : raw;
+    }
+    return toEmbed(raw);
   };
 
   const renderTracker = (estado) => {
@@ -176,7 +198,7 @@ const PortalPedidos = () => {
                     <div>
                       <strong>Pedido #{pedido.id_venta}</strong>
                       <div className="muted">
-                        {pedido.created_at ? new Date(pedido.created_at).toLocaleString() : "-"}
+                        {pedido.created_at ? formatDateTimeLaPaz(pedido.created_at) : "-"}
                       </div>
                     </div>
                     <span className={`status-pill ${pedido.estado_envio === "entregado" ? "active" : ""}`}>
@@ -281,6 +303,17 @@ const PortalPedidos = () => {
                             </div>
                           ) : (
                             <div className="muted">Opcion seleccionada.</div>
+                          )}
+                          {seleccion && (
+                            <iframe
+                              title={`map-entrega-${pedido.id_venta}`}
+                              src={buildEmbedSrcFromQuery(seleccion.maps_url, seleccion.lugar_texto)}
+                              width="100%"
+                              height="200"
+                              style={{ border: 0, borderRadius: 10, marginTop: 8 }}
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                            />
                           )}
                           {ready ? (
                             <button type="button" className="primary-button" onClick={() => handleEntregar(pedido)}>

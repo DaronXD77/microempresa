@@ -563,6 +563,9 @@ const MicroempresaCompras = () => {
             </button>
             {showProductoForm && (
               <div className="card" style={{ boxShadow: "none" }}>
+                <div className="muted" style={{ marginBottom: 8 }}>
+                  El stock inicial es 0. Se actualiza al registrar compras.
+                </div>
                 <label>
                   Nombre
                   <input

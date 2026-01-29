@@ -140,10 +140,31 @@ const PortalProductos = () => {
   const isFollowing = selectedMicro && followedIds.has(String(selectedMicro.tenant_id));
   const canFollow = authRole === "cliente" && Boolean(authUser?.id_cliente);
 
-  const buildEmbedSrcFromQuery = (query) => {
-    const q = String(query || "").trim();
-    if (!q) return "";
-    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  const buildEmbedSrcFromQuery = (value, fallbackText = "") => {
+    const raw = String(value || "").trim();
+    const fallback = String(fallbackText || "").trim();
+    const toEmbed = (query) => `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    if (!raw && fallback) return toEmbed(fallback);
+    if (!raw) return "";
+    if (raw.startsWith("http")) {
+      try {
+        const url = new URL(raw);
+        const q = url.searchParams.get("q") || url.searchParams.get("query");
+        if (q) return toEmbed(q);
+        const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
+        if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
+        if (url.hostname.includes("google.com") && url.pathname.startsWith("/maps")) {
+          const withEmbed = raw.includes("output=embed")
+            ? raw
+            : `${raw}${raw.includes("?") ? "&" : "?"}output=embed`;
+          return withEmbed;
+        }
+      } catch {
+        // ignore
+      }
+      return fallback ? toEmbed(fallback) : raw;
+    }
+    return toEmbed(raw);
   };
 
   const handleFollow = async () => {

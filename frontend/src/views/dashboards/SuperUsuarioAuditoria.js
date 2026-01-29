@@ -7,6 +7,7 @@ import { fetchAuditoria } from "../../controllers/auditController";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const SuperUsuarioAuditoria = () => {
   const [items, setItems] = useState([]);
@@ -89,7 +90,7 @@ const SuperUsuarioAuditoria = () => {
       const pageH = doc.internal.pageSize.getHeight();
       const marginX = 24;
 
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);
@@ -112,8 +113,8 @@ const SuperUsuarioAuditoria = () => {
         item.nombre || "-",
         item.email || "-",
         item.ip || "-",
-        item.login_at ? new Date(item.login_at).toLocaleString() : "-",
-        item.logout_at ? new Date(item.logout_at).toLocaleString() : "-",
+        item.login_at ? formatDateTimeLaPaz(item.login_at) : "-",
+        item.logout_at ? formatDateTimeLaPaz(item.logout_at) : "-",
       ]);
 
       autoTable(doc, {
@@ -215,8 +216,8 @@ const SuperUsuarioAuditoria = () => {
                     <td>{renderTruncated(item.nombre || "-", "Nombre")}</td>
                     <td>{renderTruncated(item.email || "-", "Email")}</td>
                     <td>{renderTruncated(item.ip || "-", "IP")}</td>
-                    <td>{item.login_at ? new Date(item.login_at).toLocaleString() : "-"}</td>
-                    <td>{item.logout_at ? new Date(item.logout_at).toLocaleString() : "-"}</td>
+                    <td>{item.login_at ? formatDateTimeLaPaz(item.login_at) : "-"}</td>
+                    <td>{item.logout_at ? formatDateTimeLaPaz(item.logout_at) : "-"}</td>
                   </tr>
                 ))
               )}

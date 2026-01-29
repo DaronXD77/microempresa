@@ -4,6 +4,7 @@ import SectionCard from "../SectionCard";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const buildFullName = (item) =>
   [item?.nombre, item?.apellido_paterno, item?.apellido_materno]
@@ -21,7 +22,7 @@ const SuperUsuarioAdmins = ({ items, onDeactivate, onActivate, currentAdminId })
       const pageH = doc.internal.pageSize.getHeight();
       const marginX = 24;
 
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);

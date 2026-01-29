@@ -12,6 +12,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const PERMISOS = [
   { key: "ventas", label: "Ventas" },
@@ -129,7 +130,7 @@ const MicroempresaEmpleados = () => {
       const pageH = doc.internal.pageSize.getHeight();
       const marginX = 24;
 
-      const generado = new Date().toLocaleString("es-ES");
+    const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);
@@ -304,8 +305,11 @@ const MicroempresaEmpleados = () => {
                       Editar
                     </button>
                     <button type="button" className="ghost-button" onClick={() => handleReset(empleado.id_empleado)}>
-                      Cambiar contrasena
+                      Reiniciar contrasena
                     </button>
+                  </div>
+                  <div className="muted" style={{ marginTop: 6 }}>
+                    La contrasena temporal se reinicia al CI del empleado.
                   </div>
                 </div>
               ))}

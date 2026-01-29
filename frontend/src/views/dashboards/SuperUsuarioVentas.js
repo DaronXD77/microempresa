@@ -7,13 +7,14 @@ import { fetchAdminVenta, fetchAdminVentas } from "../../controllers/ventaContro
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
 const formatDate = (value) => {
   if (!value) return "-";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? "-" : formatDateTimeLaPaz(d);
 };
 
 const formatMoney = (value) => `Bs ${Number(value || 0).toFixed(2)}`;
@@ -140,7 +141,7 @@ const SuperUsuarioVentas = () => {
       const pageH = doc.internal.pageSize.getHeight();
       const marginX = 24;
 
-      const generado = new Date().toLocaleString("es-ES");
+      const generado = formatDateTimeLaPaz();
 
       let y = 34;
       doc.setFontSize(16);

@@ -312,7 +312,7 @@ const PortalCarrito = () => {
         onAction: null,
       });
     }
-    setTimeout(() => navigate("/dashboard"), 2500);
+    setTimeout(() => navigate("/portal/pedidos"), 1200);
   };
 
   const handleRegistroChange = (event) => {
@@ -348,6 +348,9 @@ const PortalCarrito = () => {
     setAuthUser(data.user || null);
     setAuthRole(data.role || "cliente");
     setAuthReady(true);
+    if (data.user?.email) {
+      setCartOwner(String(data.user.email || "").toLowerCase());
+    }
     setCliente({
       nombre: data.user?.nombre || "",
       apellido_paterno: data.user?.apellido_paterno || "",

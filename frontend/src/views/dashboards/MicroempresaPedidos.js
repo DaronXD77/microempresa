@@ -8,6 +8,7 @@ import ToastModal from "../ToastModal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { openPdf } from "../../utils/pdf";
+import { formatDateTimeLaPaz } from "../../utils/date";
 
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "").replace(/\/$/, "");
@@ -246,7 +247,7 @@ const MicroempresaPedidos = () => {
 
       const empresaNombre = micro?.razon_social || micro?.nombre || micro?.name || "Microempresa";
       const titulo = `Reporte de pedidos — ${mesActual.label}`;
-      const generado = new Date().toLocaleString();
+      const generado = formatDateTimeLaPaz();
 
       // Logo (si existe, no bloquea si falla)
       let y = 40;
@@ -304,7 +305,7 @@ const MicroempresaPedidos = () => {
 
       // Tabla
       const rows = (mesActual.pedidos || []).map((p) => {
-        const fecha = p?.created_at ? new Date(p.created_at).toLocaleString() : "-";
+        const fecha = p?.created_at ? formatDateTimeLaPaz(p.created_at) : "-";
         const cliente = p?.cliente_nombre || p?.cliente_email || "Sin cliente";
         const estado = p?.estado_envio || p?.estado || "-";
         const total = `Bs ${Number(p?.total || 0).toFixed(2)}`;
@@ -585,7 +586,7 @@ const MicroempresaPedidos = () => {
                   <div className="pedido-head">
                     <div>
                       <strong>Pedido #{pedido.id_venta}</strong>
-                      <div className="muted">{pedido.created_at ? new Date(pedido.created_at).toLocaleString() : "-"}</div>
+                      <div className="muted">{pedido.created_at ? formatDateTimeLaPaz(pedido.created_at) : "-"}</div>
                     </div>
                     <span className={`status-pill ${pedido.estado_envio === "empaquetado" ? "active" : ""}`}>
                       {pedido.estado_envio}
