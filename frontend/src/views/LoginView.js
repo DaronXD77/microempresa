@@ -46,7 +46,7 @@ const LoginView = ({
   const [empresaSearch, setEmpresaSearch] = useState("");
   const [empresaOpen, setEmpresaOpen] = useState(false);
 
-  const shouldLoadEmpresas = mode === "register" && registerRole === "cliente";
+  const shouldLoadEmpresas = false;
 
   useEffect(() => {
     let alive = true;
@@ -341,55 +341,6 @@ const LoginView = ({
                     CI
                     <input name="ci" value={form.ci} onChange={onChange} required />
                   </label>
-
-                  <label>
-                    Microempresa (opcional)
-                    <div className="select-search">
-                      <input
-                        placeholder="Buscar microempresa"
-                        value={empresaSearch || ""}
-                        onChange={(e) => handleEmpresaInput(e.target.value)}
-                        onKeyDown={handleEmpresaKeyDown}
-                        onFocus={() => setEmpresaOpen(true)}
-                        onBlur={() => {
-                          const exact = matchEmpresa(empresaSearch);
-                          if (exact) {
-                            selectEmpresa(exact);
-                          } else {
-                            // Exigimos selección: si no coincide, limpiamos
-                            setEmpresaSearch("");
-                            onChange({ target: { name: "tenant_id", value: "" } });
-                          }
-                          setTimeout(() => setEmpresaOpen(false), 120);
-                        }}
-                        disabled={loadingEmpresas}
-                      />
-                      {empresaOpen && (
-                        <div className="select-dropdown">
-                          {empresaOptions.length === 0 ? (
-                            <div className="select-empty">Sin resultados</div>
-                          ) : (
-                            empresaOptions.map((m) => (
-                              <button
-                                key={m.tenant_id}
-                                type="button"
-                                className="select-item"
-                                onMouseDown={() => selectEmpresa(m)}
-                              >
-                                {m.nombre}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </label>
-
-                  {empresasError ? (
-                    <p className="error" style={{ marginTop: 8 }}>
-                      {empresasError}
-                    </p>
-                  ) : null}
 
                   <div className="radio-group">
                     <span>Tipo de cliente</span>
