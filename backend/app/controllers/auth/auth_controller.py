@@ -11,6 +11,7 @@ from ...services.auth_service import (
     is_active_user,
     is_valid_schedule,
     is_valid_url,
+    check_microempresa_subscription,
     serialize_user,
 )
 from ...views.auth import auth_response, guest_response
@@ -64,6 +65,18 @@ def _audit_logout():
         db.session.commit()
 
 
+def _subscription_required_response(microempresa, solicitud):
+    return (
+        jsonify({
+            "error": "Suscripción vencida o pendiente. Selecciona un plan para continuar.",
+            "subscription_required": True,
+            "tenant_id": getattr(microempresa, "tenant_id", None),
+            "signup_id": getattr(solicitud, "id_solicitud", None),
+        }),
+        402,
+    )
+
+
 @auth_bp.post("/api/register")
 def register():
     payload = request.get_json(silent=True) or {}
@@ -88,7 +101,6 @@ def register():
                 horario,
                 nombre_prop,
                 apellido_paterno_prop,
-                apellido_materno_prop,
                 email,
                 password,
             ]
@@ -111,7 +123,7 @@ def register():
             horario_atencion=horario,
             nombre_propietario=nombre_prop,
             apellido_paterno_propietario=apellido_paterno_prop,
-            apellido_materno_propietario=apellido_materno_prop,
+            apellido_materno_propietario=apellido_materno_prop or None,
             email=email,
             password=hash_password(password),
             estado="activo",
@@ -130,9 +142,9 @@ def register():
         email = (payload.get("email") or "").strip()
         password = payload.get("password") or ""
 
-        if not all([nombre, apellido_paterno, apellido_materno, email, password]):
+        if not all([nombre, apellido_materno, email, password]):
             return (
-                jsonify({"error": "Nombre y apellidos son requeridos"}),
+                jsonify({"error": "Nombre y apellido materno son requeridos"}),
                 400,
             )
 
@@ -141,7 +153,7 @@ def register():
 
         admin_user = AdminSu(
             nombre=nombre,
-            apellido_paterno=apellido_paterno,
+            apellido_paterno=apellido_paterno or None,
             apellido_materno=apellido_materno,
             email=email,
             password=hash_password(password),
@@ -165,7 +177,7 @@ def register():
         es_empresa = payload.get("es_empresa")
         es_generico = payload.get("es_generico", False)
 
-        if not all([nombre, apellido_materno, ci, email, password]):
+        if not all([nombre, apellido_paterno, ci, email, password]):
             return jsonify({"error": "Todos los campos son requeridos"}), 400
         if not isinstance(es_empresa, bool):
             return jsonify({"error": "es_empresa debe ser boolean"}), 400
@@ -176,13 +188,13 @@ def register():
 
         if Cliente.query.filter_by(email=email).first():
             return jsonify({"error": "Email ya registrado"}), 409
-        if Cliente.query.filter_by(tenant_id=None, ci=ci).first():
+        if Cliente.query.filter_by(ci=ci).first():
             return jsonify({"error": "CI ya registrado"}), 409
 
         cliente = Cliente(
             nombre=nombre,
             apellido_paterno=apellido_paterno,
-            apellido_materno=apellido_materno,
+            apellido_materno=apellido_materno or None,
             ci=ci,
             razon_social=razon_social or None,
             es_generico=bool(es_generico),
@@ -223,6 +235,11 @@ def login():
         ):
             return jsonify({"error": "Credenciales inválidas"}), 401
 
+        if role == "microempresa":
+            ok, solicitud = check_microempresa_subscription(user)
+            if not ok:
+                return _subscription_required_response(user, solicitud)
+
         login_user(user)
         _audit_login(user, role)
         user_data, user_role = serialize_user(user)
@@ -239,6 +256,12 @@ def login():
     if not available_roles:
         return jsonify({"error": "Credenciales inválidas"}), 401
 
+    if available_roles == ["microempresa"]:
+        user = users_by_role.get("microempresa")
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
+
     if len(available_roles) > 1:
         return jsonify({"select_role": True, "roles": available_roles}), 200
 
@@ -246,6 +269,11 @@ def login():
     user = users_by_role[role_key]
     if not user or not is_active_user(user):
         return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if role_key == "microempresa":
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
     login_user(user)
     _audit_login(user, role_key)
     user_data, user_role = serialize_user(user)
@@ -304,6 +332,11 @@ def switch_role():
         or not is_active_user(user)
     ):
         return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if role == "microempresa":
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
 
     login_user(user)
     _audit_login(user, role)

@@ -7,17 +7,9 @@ class Cliente(UserMixin, db.Model):
 
     id_cliente = db.Column(db.BigInteger, primary_key=True)
 
-    # clave multi-tenant
-    tenant_id = db.Column(
-        db.BigInteger,
-        db.ForeignKey("microempresa.tenant_id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-
     nombre = db.Column(db.String(100), nullable=False)
     apellido_paterno = db.Column(db.String(100), nullable=False)
-    apellido_materno = db.Column(db.String(100), nullable=False)
+    apellido_materno = db.Column(db.String(100), nullable=True)
     ci = db.Column(db.String(40), nullable=True, index=True)
     razon_social = db.Column(db.String(150))
     es_generico = db.Column(db.Boolean, nullable=False, default=False)
@@ -36,7 +28,6 @@ class Cliente(UserMixin, db.Model):
 
     estado = db.Column(db.String(20), nullable=False, default="activo")
 
-    microempresa = db.relationship("Microempresa", back_populates="clientes")
     microempresas = db.relationship(
         "Microempresa",
         secondary="cliente_microempresa",
@@ -50,7 +41,6 @@ class Cliente(UserMixin, db.Model):
     def to_dict(self):
         return {
             "id_cliente": self.id_cliente,
-            "tenant_id": self.tenant_id,
             "nombre": self.nombre,
             "apellido_paterno": self.apellido_paterno,
             "apellido_materno": self.apellido_materno,

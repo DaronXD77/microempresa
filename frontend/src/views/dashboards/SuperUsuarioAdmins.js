@@ -3,6 +3,7 @@ import SectionCard from "../SectionCard";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const buildFullName = (item) =>
   [item?.nombre, item?.apellido_paterno, item?.apellido_materno]
@@ -65,7 +66,7 @@ const SuperUsuarioAdmins = ({ items, onDeactivate, onActivate, currentAdminId })
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_superusuarios_${stamp}.pdf`);
+      openPdf(doc, `informe_superusuarios_${stamp}.pdf`);
     } catch (e) {
       console.error(e);
     }

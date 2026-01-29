@@ -47,6 +47,15 @@ def parse_price(value):
         return None
 
 
+def parse_days(value):
+    try:
+        if value is None or value == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def normalize_features(payload):
     """
     Recibe payload["caracteristicas"] como lista de strings
@@ -157,6 +166,7 @@ def admin_create_plan():
     nombre = (payload.get("nombre") or "").strip()
     estado = (payload.get("estado") or "activo").strip() or "activo"
     precio_raw = payload.get("precio")
+    dias_validez_raw = payload.get("dias_validez")
 
     if not nombre:
         return jsonify({"error": "Nombre requerido"}), 400
@@ -170,6 +180,10 @@ def admin_create_plan():
     if precio < 0:
         return jsonify({"error": "Precio no puede ser negativo"}), 400
 
+    dias_validez = parse_days(dias_validez_raw)
+    if dias_validez is None or dias_validez <= 0:
+        return jsonify({"error": "Dias de validez inválido"}), 400
+
     features = normalize_features(payload)
     if features == "invalid":
         return jsonify({"error": "caracteristicas debe ser una lista"}), 400
@@ -180,7 +194,7 @@ def admin_create_plan():
     if features is None:
         features = []
 
-    plan = Plan(nombre=nombre, precio=precio, estado=estado)
+    plan = Plan(nombre=nombre, precio=precio, dias_validez=dias_validez, estado=estado)
     db.session.add(plan)
     db.session.flush()  # para tener id_plan
 
@@ -217,6 +231,12 @@ def admin_update_plan(plan_id):
         if precio < 0:
             return jsonify({"error": "Precio no puede ser negativo"}), 400
         plan.precio = precio
+
+    if "dias_validez" in payload:
+        dias_validez = parse_days(payload.get("dias_validez"))
+        if dias_validez is None or dias_validez <= 0:
+            return jsonify({"error": "Dias de validez inválido"}), 400
+        plan.dias_validez = dias_validez
 
     if "estado" in payload:
         estado = (payload.get("estado") or "").strip()

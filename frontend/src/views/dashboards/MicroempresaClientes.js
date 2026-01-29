@@ -103,8 +103,8 @@ function payloadFromForm(form, includePassword) {
 }
 
 function validatePayload(payload, includePassword) {
-  if (!payload.nombre || !payload.apellido_paterno || !payload.apellido_materno) {
-    return "Completa nombre y apellidos";
+  if (!payload.nombre || !payload.apellido_paterno) {
+    return "Completa nombre y apellido paterno";
   }
   if (!payload.ci) return "CI requerido";
   if (!payload.email) return "Email requerido";
@@ -569,12 +569,14 @@ export default function MicroempresaClientes() {
               placeholder="Nombre"
               value={registerForm.nombre}
               onChange={onRegisterChange}
+              required
             />
             <input
               name="apellido_paterno"
               placeholder="Apellido paterno"
               value={registerForm.apellido_paterno}
               onChange={onRegisterChange}
+              required
             />
             <input
               name="apellido_materno"
@@ -587,6 +589,7 @@ export default function MicroempresaClientes() {
               placeholder="CI"
               value={registerForm.ci}
               onChange={onRegisterChange}
+              required
             />
 
             <div style={{ display: "grid", gap: 6 }}>
@@ -629,6 +632,7 @@ export default function MicroempresaClientes() {
               placeholder="Email"
               value={registerForm.email}
               onChange={onRegisterChange}
+              required
             />
 
             <input
@@ -637,6 +641,7 @@ export default function MicroempresaClientes() {
               type="password"
               value={registerForm.password}
               onChange={onRegisterChange}
+              required
             />
 
             <div style={{ display: "flex", gap: 10 }}>

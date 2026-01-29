@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 from sqlalchemy import func
 
-from ..models import Categoria, FotoProducto, Microempresa, Producto, Proveedor, Cliente, db
+from ..models import Categoria, FotoProducto, Microempresa, Producto, Proveedor, Cliente, ClienteMicroempresa, db
 from ..services.auth_service import get_current_role, has_permission
 from ..services.product_storage_service import build_producto_foto_url, save_producto_foto
 from ..services.venta_storage_service import build_upload_url
@@ -132,16 +132,12 @@ def create_producto():
         micro = Microempresa.query.filter_by(tenant_id=tenant_id).first()
         micro_nombre = micro.nombre if micro and micro.nombre else "Microempresa"
 
-        # Clientes activos:
-        # - que pertenecen a esta microempresa (tenant_id)
-        # - o que la siguen (many-to-many Cliente.microempresas)
+        # Clientes activos vinculados a esta microempresa
         clientes = (
             Cliente.query
             .filter(Cliente.estado == "activo")
-            .filter(
-                (Cliente.tenant_id == tenant_id) |
-                (Cliente.microempresas.any(Microempresa.tenant_id == tenant_id))
-            )
+            .join(ClienteMicroempresa, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
+            .filter(ClienteMicroempresa.tenant_id == tenant_id)
             .all()
         )
 

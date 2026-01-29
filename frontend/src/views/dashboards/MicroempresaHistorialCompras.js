@@ -6,6 +6,7 @@ import { fetchMe } from "../../controllers/authController";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 // Formatea fechas de forma consistente
 const formatFecha = (value) => {
@@ -221,7 +222,7 @@ const MicroempresaHistorialCompras = () => {
 
       // Nombre del archivo
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_compras_${stamp}.pdf`);
+      openPdf(doc, `informe_compras_${stamp}.pdf`);
     } catch (e) {
       // Si falla el logo o la generación, se muestra un error simple
       // Se evita un Toast aquí para no introducir dependencias adicionales no presentes

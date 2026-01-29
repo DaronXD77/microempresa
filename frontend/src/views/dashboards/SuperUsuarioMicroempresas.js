@@ -3,6 +3,7 @@ import SectionCard from "../SectionCard";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const prettyTipo = (t) => {
   const v = String(t || "").toLowerCase();
@@ -106,7 +107,7 @@ const SuperUsuarioMicroempresas = ({ items, onDeactivate, onActivate }) => {
 
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_microempresas_${stamp}.pdf`);
+      openPdf(doc, `informe_microempresas_${stamp}.pdf`);
     } catch (e) {
       // Este componente no tiene ToastModal propio; si quieres, puedes propagar el error al padre
       console.error(e);

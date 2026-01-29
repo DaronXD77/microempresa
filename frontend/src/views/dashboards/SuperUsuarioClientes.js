@@ -4,6 +4,7 @@ import SectionCard from "../SectionCard";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const buildFullName = (item) =>
   [item?.nombre, item?.apellido_paterno, item?.apellido_materno]
@@ -74,10 +75,20 @@ const SuperUsuarioClientes = ({
       .filter((c) => (showAll ? true : normalize(c.estado) === "activo"))
       .filter((c) => {
         if (!tenantFilter) return true;
-        return String(c.tenant_id ?? "") === String(tenantFilter);
+        const tenantIds = Array.isArray(c.microempresas)
+          ? c.microempresas.map((m) => String(m.tenant_id))
+          : [];
+        return tenantIds.includes(String(tenantFilter)) || String(c.tenant_id ?? "") === String(tenantFilter);
       })
       .filter((c) => {
         if (!query) return true;
+
+        const tenantIds = Array.isArray(c.microempresas)
+          ? c.microempresas.map((m) => String(m.tenant_id))
+          : [];
+        const tenantNames = Array.isArray(c.microempresas)
+          ? c.microempresas.map((m) => m.nombre)
+          : [];
 
         const haystack = [
           buildFullName(c),
@@ -86,6 +97,8 @@ const SuperUsuarioClientes = ({
           c.razon_social,
           String(c.tenant_id ?? ""),
           c.microempresa_nombre,
+          ...tenantIds,
+          ...tenantNames,
         ]
           .filter(Boolean)
           .map(normalize)
@@ -159,7 +172,7 @@ const SuperUsuarioClientes = ({
       razon_social: form.tipo_cliente === "empresa" ? (form.razon_social || "").trim() : "",
     };
 
-    if (!payload.nombre || !payload.apellido_paterno || !payload.apellido_materno) return;
+    if (!payload.nombre || !payload.apellido_paterno) return;
     if (!payload.ci) return;
     if (!payload.email) return;
     if (payload.es_empresa && !payload.razon_social) return;
@@ -229,11 +242,18 @@ const SuperUsuarioClientes = ({
       const body = rowsSource.map((item) => {
         const id = item.id ?? item.id_cliente;
         const tenantId = item.tenant_id;
+        const tenantList = Array.isArray(item.microempresas) ? item.microempresas : [];
 
-        const tenantName =
-          item.microempresa_nombre ||
-          (tenantId != null ? tenantNameById.get(String(tenantId)) : "") ||
-          "-";
+        const tenantLabel = tenantList.length
+          ? tenantList
+              .map((m) => `${m.nombre || ""}${m.tenant_id != null ? ` (#${m.tenant_id})` : ""}`.trim())
+              .filter(Boolean)
+              .join(", ")
+          : (
+              item.microempresa_nombre ||
+              (tenantId != null ? tenantNameById.get(String(tenantId)) : "") ||
+              "-"
+            );
 
         const tipoLabel = item.razon_social ? "Empresa" : "Persona";
 
@@ -244,7 +264,7 @@ const SuperUsuarioClientes = ({
           tipoLabel,
           item.razon_social || "-",
           item.email || "-",
-          `${tenantName}${tenantId != null ? ` (#${tenantId})` : ""}`.trim(),
+          tenantLabel,
           item.estado || "-",
           sourceLabel(item.creation_source) || "-",
         ];
@@ -288,7 +308,7 @@ const SuperUsuarioClientes = ({
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_clientes_superusuario_${stamp}.pdf`);
+      openPdf(doc, `informe_clientes_superusuario_${stamp}.pdf`);
     } catch (e) {
       console.error(e);
     }
@@ -366,11 +386,18 @@ const SuperUsuarioClientes = ({
               {filtered.map((item) => {
                 const id = item.id ?? item.id_cliente;
                 const tenantId = item.tenant_id;
+                const tenantList = Array.isArray(item.microempresas) ? item.microempresas : [];
 
-                const tenantName =
-                  item.microempresa_nombre ||
-                  (tenantId != null ? tenantNameById.get(String(tenantId)) : "") ||
-                  "-";
+                const tenantLabel = tenantList.length
+                  ? tenantList
+                      .map((m) => `${m.nombre || ""}${m.tenant_id != null ? ` (#${m.tenant_id})` : ""}`.trim())
+                      .filter(Boolean)
+                      .join(", ")
+                  : (
+                      item.microempresa_nombre ||
+                      (tenantId != null ? tenantNameById.get(String(tenantId)) : "") ||
+                      "-"
+                    );
 
                 const isEditing = editingId != null && String(editingId) === String(id);
                 const tipoLabel = item.razon_social ? "Empresa" : "Persona";
@@ -384,12 +411,7 @@ const SuperUsuarioClientes = ({
                         <td style={cell}>{tipoLabel}</td>
                         <td style={cell}>{renderTruncated(item.razon_social || "-", "Razon social")}</td>
                         <td style={cell}>{renderTruncated(item.email, "Email")}</td>
-                        <td style={cell}>
-                          {renderTruncated(
-                            `${tenantName} ${tenantId != null ? `(#${tenantId})` : ""}`.trim(),
-                            "Microempresa"
-                          )}
-                        </td>
+                        <td style={cell}>{renderTruncated(tenantLabel, "Microempresa")}</td>
                         <td style={cell}>
                           <span style={estadoStyle(item.estado)}>{item.estado}</span>
                         </td>

@@ -98,8 +98,8 @@ def onboarding_start():
     is_virtual = _infer_virtual(tipo_tienda_raw, direccion, horario_atencion)
 
     # Campos siempre requeridos
-    if not all([nombre, nombre_prop,  ap_mat, email]):
-        return jsonify({"error": "Campos requeridos: nombre, propietario, apellidos, email."}), 400
+    if not all([nombre, nombre_prop, ap_pat, email]):
+        return jsonify({"error": "Campos requeridos: nombre, propietario, apellido paterno, email."}), 400
 
     # Dirección/horario solo si NO es virtual
     if not is_virtual:
@@ -168,7 +168,7 @@ def onboarding_start():
                     microempresa.horario_atencion = horario_atencion
                     microempresa.nombre_propietario = nombre_prop
                     microempresa.apellido_paterno_propietario = ap_pat
-                    microempresa.apellido_materno_propietario = ap_mat
+                    microempresa.apellido_materno_propietario = ap_mat or None
                     microempresa.email = email
 
                     if password:
@@ -227,7 +227,7 @@ def onboarding_start():
         existing.horario_atencion = horario_atencion
         existing.nombre_propietario = nombre_prop
         existing.apellido_paterno_propietario = ap_pat
-        existing.apellido_materno_propietario = ap_mat
+        existing.apellido_materno_propietario = ap_mat or None
 
         if password:
             existing.password = hash_password(password)
@@ -253,7 +253,7 @@ def onboarding_start():
         horario_atencion=horario_atencion,
         nombre_propietario=nombre_prop,
         apellido_paterno_propietario=ap_pat,
-        apellido_materno_propietario=ap_mat,
+        apellido_materno_propietario=ap_mat or None,
         email=email,
         password=hash_password(password),
         estado="pendiente",

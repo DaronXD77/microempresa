@@ -101,7 +101,8 @@ def approve_microempresa(tenant_id: int):
     micro.estado = "activo"
 
     # registrar suscripción activa
-    days = int(current_app.config.get("SUBSCRIPTION_DEFAULT_DAYS", 30))
+    plan = Plan.query.get(sol.id_plan)
+    days = int(getattr(plan, "dias_validez", 0) or current_app.config.get("SUBSCRIPTION_DEFAULT_DAYS", 30))
     now = datetime.utcnow()
 
     sus = Suscripcion(

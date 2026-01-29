@@ -269,12 +269,11 @@ const LoginView = ({
                     <input name="nombre" value={form.nombre} onChange={onChange} required />
                   </label>
                   <label>
-                    Apellido paterno
+                    Apellido paterno (opcional)
                     <input
                       name="apellido_paterno"
                       value={form.apellido_paterno}
                       onChange={onChange}
-                      required
                     />
                   </label>
                   <label>
@@ -327,21 +326,21 @@ const LoginView = ({
                   </label>
 
                   <label>
-                    Apellido paterno (opcional)
+                    Apellido paterno
                     <input
                       name="apellido_paterno"
                       value={form.apellido_paterno}
                       onChange={onChange}
+                      required
                     />
                   </label>
 
                   <label>
-                    Apellido materno
+                    Apellido materno (opcional)
                     <input
                       name="apellido_materno"
                       value={form.apellido_materno}
                       onChange={onChange}
-                      required
                     />
                   </label>
 

@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, session
 from flask_login import current_user
 
-from ..models import AdminSu, Cliente, Microempresa, Producto
+from ..models import AdminSu, Cliente, ClienteMicroempresa, Microempresa, Producto, db
 from ..services.auth_service import guest_payload, serialize_user
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -25,7 +25,19 @@ def dashboard():
         clientes = Cliente.query.order_by(Cliente.nombre).all()
         admins = AdminSu.query.order_by(AdminSu.apellido_paterno, AdminSu.nombre).all()
 
-        tenant_name = {m.tenant_id: m.nombre for m in microempresas}
+        relaciones = (
+            db.session.query(ClienteMicroempresa, Microempresa)
+            .join(Microempresa, Microempresa.tenant_id == ClienteMicroempresa.tenant_id)
+            .all()
+        )
+        clientes_map = {}
+        for rel, micro in relaciones:
+            clientes_map.setdefault(rel.id_cliente, []).append(
+                {
+                    "tenant_id": micro.tenant_id,
+                    "nombre": micro.nombre,
+                }
+            )
 
         return jsonify(
             {
@@ -60,8 +72,9 @@ def dashboard():
                 "clientes": [
                     {
                         "id": c.id_cliente,
-                        "tenant_id": c.tenant_id,
-                        "microempresa_nombre": tenant_name.get(c.tenant_id),
+                        "tenant_id": (clientes_map.get(c.id_cliente) or [{}])[0].get("tenant_id"),
+                        "microempresa_nombre": (clientes_map.get(c.id_cliente) or [{}])[0].get("nombre"),
+                        "microempresas": clientes_map.get(c.id_cliente, []),
                         "nombre": c.nombre,
                         "apellido_paterno": c.apellido_paterno,
                         "apellido_materno": c.apellido_materno,
@@ -83,7 +96,11 @@ def dashboard():
             return jsonify({"error": "Tenant inválido"}), 400
 
         productos_count = Producto.query.filter_by(tenant_id=tenant_id).count()
-        clientes_count = Cliente.query.filter_by(tenant_id=tenant_id).count()
+        clientes_count = (
+            ClienteMicroempresa.query
+            .filter_by(tenant_id=tenant_id)
+            .count()
+        )
         stock_alerts = (
             Producto.query
             .filter(Producto.tenant_id == tenant_id)

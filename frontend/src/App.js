@@ -396,6 +396,19 @@ const AppContent = () => {
     setAppToast({ open: true, message: msg, variant });
   };
 
+  const handleSubscriptionRequired = (data, fallbackEmail) => {
+    if (!data?.subscription_required) return false;
+    const email = String(fallbackEmail || "").trim().toLowerCase();
+    if (data.signup_id) localStorage.setItem("onb_signup_id", String(data.signup_id));
+    if (data.tenant_id) localStorage.setItem("onb_tenant_id", String(data.tenant_id));
+    if (email) localStorage.setItem("onb_email", email);
+    localStorage.removeItem("onb_plan_id");
+    localStorage.removeItem("onb_plan_name");
+    localStorage.removeItem("onb_plan_price");
+    window.location.hash = "#/registro/microempresa/plan";
+    return true;
+  };
+
   const handleLogin = async () => {
     const { response, data } = await login({
       username: form.username,
@@ -403,6 +416,7 @@ const AppContent = () => {
     });
 
     if (!response.ok) {
+      if (handleSubscriptionRequired(data, form.username)) return;
       setMessage(data.error || "Ocurrió un error");
       return;
     }
@@ -547,6 +561,7 @@ const AppContent = () => {
     });
 
     if (!response.ok) {
+      if (handleSubscriptionRequired(data, pendingLogin?.username)) return;
       setMessage(data.error || "Ocurrió un error");
       return;
     }
@@ -578,6 +593,7 @@ const AppContent = () => {
   const handleSwitchRole = async (selectedRole) => {
     const { response, data } = await switchRole(selectedRole);
     if (!response.ok) {
+      if (handleSubscriptionRequired(data, user?.email)) return;
       setMessage(data.error || "Ocurrió un error");
       return;
     }

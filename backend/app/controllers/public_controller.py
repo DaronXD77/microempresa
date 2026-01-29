@@ -67,7 +67,7 @@ def public_register_cliente():
             if not micro:
                 return jsonify({"error": "Microempresa inválida"}), 400
 
-        if not all([nombre, apellido_materno, ci, email, password]):
+        if not all([nombre, apellido_paterno, ci, email, password]):
             return jsonify({"error": "Todos los campos son requeridos"}), 400
 
         if not isinstance(es_empresa, bool):
@@ -79,16 +79,22 @@ def public_register_cliente():
         # Email único global
         if Cliente.query.filter_by(email=email).first():
             return jsonify({"error": "Email ya registrado"}), 409
-        tenant_scope = tenant_id or None
-        if Cliente.query.filter_by(tenant_id=tenant_scope, ci=ci).first():
-            return jsonify({"error": "CI ya registrado en esta microempresa"}), 409
+        if tenant_id:
+            exists_ci = (
+                ClienteMicroempresa.query
+                .join(Cliente, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
+                .filter(ClienteMicroempresa.tenant_id == tenant_id)
+                .filter(Cliente.ci == ci)
+                .first()
+            )
+            if exists_ci:
+                return jsonify({"error": "CI ya registrado en esta microempresa"}), 409
 
         # Crear cliente
         cliente = Cliente()
-        cliente.tenant_id = tenant_id or None
         cliente.nombre = nombre
         cliente.apellido_paterno = apellido_paterno
-        cliente.apellido_materno = apellido_materno
+        cliente.apellido_materno = apellido_materno or None
         cliente.ci = ci
         cliente.razon_social = razon_social if es_empresa else None
         cliente.es_generico = False

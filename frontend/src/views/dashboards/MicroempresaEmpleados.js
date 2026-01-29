@@ -11,6 +11,7 @@ import {
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const PERMISOS = [
   { key: "ventas", label: "Ventas" },
@@ -180,7 +181,7 @@ const MicroempresaEmpleados = () => {
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_empleados_${stamp}.pdf`);
+      openPdf(doc, `informe_empleados_${stamp}.pdf`);
 
       setToast({ open: true, message: "Informe PDF generado.", variant: "success" });
     } catch (e) {

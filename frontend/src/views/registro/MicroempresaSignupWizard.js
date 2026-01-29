@@ -70,7 +70,7 @@ const initialForm = {
   horario_inicio: "",
   horario_fin: "",
   nombre_propietario: "",
-  apellido_paterno_propietario: "", // opcional si quieres (pero backend exige apellido paterno? aquí no, exige ap_mat)
+  apellido_paterno_propietario: "",
   apellido_materno_propietario: "",
   email: "",
   password: "",
@@ -552,21 +552,21 @@ export default function MicroempresaSignupWizard() {
                   </label>
 
                   <label>
-                    Apellido paterno del propietario (opcional)
+                    Apellido paterno del propietario
                     <input
                       name="apellido_paterno_propietario"
                       value={form.apellido_paterno_propietario}
                       onChange={onChange}
+                      required
                     />
                   </label>
 
                   <label>
-                    Apellido materno del propietario
+                    Apellido materno del propietario (opcional)
                     <input
                       name="apellido_materno_propietario"
                       value={form.apellido_materno_propietario}
                       onChange={onChange}
-                      required
                     />
                   </label>
 

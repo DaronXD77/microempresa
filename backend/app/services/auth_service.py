@@ -2,7 +2,7 @@ import hashlib
 from datetime import datetime
 from urllib.parse import urlparse
 
-from ..models import AdminSu, Cliente, Microempresa, Empleado
+from ..models import AdminSu, Cliente, Microempresa, Empleado, Suscripcion, SuscripcionSolicitud
 from ..services.venta_storage_service import build_upload_url
 from ..models.auth import ROLE_TYPES
 from ..models.base import db
@@ -92,6 +92,54 @@ def get_users_by_identifier(identifier):
 
 def is_active_user(user):
     return getattr(user, "estado", "activo") == "activo"
+
+
+def get_active_subscription(tenant_id: int | None):
+    if not tenant_id:
+        return None
+    now = datetime.utcnow()
+    return (
+        Suscripcion.query
+        .filter_by(tenant_id=tenant_id, estado="activa")
+        .filter((Suscripcion.fecha_fin == None) | (Suscripcion.fecha_fin >= now))
+        .order_by(Suscripcion.fecha_fin.desc(), Suscripcion.id_suscripcion.desc())
+        .first()
+    )
+
+
+def ensure_pending_solicitud(tenant_id: int):
+    latest = (
+        SuscripcionSolicitud.query
+        .filter_by(tenant_id=tenant_id)
+        .order_by(SuscripcionSolicitud.creado_en.desc())
+        .first()
+    )
+    if latest and (latest.estado or "").lower() in {"borrador", "plan_seleccionado", "en_espera"}:
+        return latest
+
+    raw_token, token_hash, expires = SuscripcionSolicitud.generate_onboarding_token()
+    solicitud = SuscripcionSolicitud(
+        tenant_id=tenant_id,
+        id_plan=None,
+        estado="borrador",
+        onboarding_token_hash=token_hash,
+        onboarding_expires_at=expires,
+        qr_text=None,
+        comprobante_path=None,
+    )
+    db.session.add(solicitud)
+    db.session.commit()
+    return solicitud
+
+
+def check_microempresa_subscription(microempresa: Microempresa):
+    if not microempresa:
+        return True, None
+    active = get_active_subscription(microempresa.tenant_id)
+    if active:
+        return True, None
+    solicitud = ensure_pending_solicitud(microempresa.tenant_id)
+    return False, solicitud
 
 
 def get_user_permissions(user):

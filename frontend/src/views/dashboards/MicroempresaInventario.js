@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { resolveAssetUrl } from "../../utils/url";
+import { openPdf } from "../../utils/pdf";
 
 const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5000").replace(/\/$/, "");
 
@@ -303,7 +304,7 @@ const MicroempresaInventario = () => {
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_inventario_${stamp}.pdf`);
+      openPdf(doc, `informe_inventario_${stamp}.pdf`);
       setMessage("Informe de inventario generado.");
     } catch (e) {
       setMessage(e?.message || "No se pudo generar el informe de inventario.");

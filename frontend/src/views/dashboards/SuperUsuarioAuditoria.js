@@ -6,6 +6,7 @@ import { fetchAuditoria } from "../../controllers/auditController";
 // PDF
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { openPdf } from "../../utils/pdf";
 
 const SuperUsuarioAuditoria = () => {
   const [items, setItems] = useState([]);
@@ -140,7 +141,7 @@ const SuperUsuarioAuditoria = () => {
       });
 
       const stamp = new Date().toISOString().slice(0, 10);
-      doc.save(`informe_auditoria_${stamp}.pdf`);
+      openPdf(doc, `informe_auditoria_${stamp}.pdf`);
 
       setToast({ open: true, message: "Informe PDF generado.", variant: "success" });
     } catch (e) {

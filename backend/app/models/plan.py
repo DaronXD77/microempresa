@@ -8,6 +8,7 @@ class Plan(db.Model):
     id_plan = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False, unique=True)
     precio = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    dias_validez = db.Column(db.Integer, nullable=False, default=30)
     estado = db.Column(db.String(20), nullable=False, default="activo")
 
     # ✅ NUEVO: características (1 plan -> muchas características)
@@ -24,6 +25,7 @@ class Plan(db.Model):
             "id_plan": self.id_plan,
             "nombre": self.nombre,
             "precio": float(self.precio or 0),
+            "dias_validez": int(self.dias_validez or 0),
             "estado": self.estado,
             # ✅ NUEVO
             "caracteristicas": [c.texto for c in (self.caracteristicas or [])],

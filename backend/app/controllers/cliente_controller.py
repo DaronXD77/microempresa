@@ -37,16 +37,26 @@ def can_access_cliente_obj(cliente: Cliente):
 
     role = get_current_role(current_user)
 
+    def has_tenant_link(tenant_id: int | None) -> bool:
+        if not tenant_id:
+            return False
+        return (
+            ClienteMicroempresa.query
+            .filter_by(id_cliente=cliente.id_cliente, tenant_id=tenant_id)
+            .first()
+            is not None
+        )
+
     if role == "super_usuario":
         return True
 
     if role == "microempresa":
-        return cliente.tenant_id == getattr(current_user, "tenant_id", None)
+        return has_tenant_link(getattr(current_user, "tenant_id", None))
 
     if role == "empleado":
         return (
             has_permission(current_user, "gestion_clientes")
-            and cliente.tenant_id == getattr(current_user, "tenant_id", None)
+            and has_tenant_link(getattr(current_user, "tenant_id", None))
         )
 
     return role == "cliente" and getattr(current_user, "id_cliente", None) == cliente.id_cliente
@@ -72,13 +82,13 @@ def list_clientes():
         if tenant_id is None:
             return jsonify({"error": "Tenant inválido"}), 400
 
-        created = Cliente.query.filter_by(tenant_id=tenant_id)
-        followed = (
+        clientes = (
             Cliente.query
             .join(ClienteMicroempresa, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
             .filter(ClienteMicroempresa.tenant_id == tenant_id)
+            .order_by(Cliente.nombre)
+            .all()
         )
-        clientes = created.union(followed).order_by(Cliente.nombre).all()
         return jsonify({"clientes": [cliente_item(c) for c in clientes]})
 
     return jsonify({"error": "No autorizado"}), 403
@@ -111,7 +121,7 @@ def create_cliente():
 
     payload = request.get_json(silent=True) or {}
 
-    # enant_id definido por backend
+    # tenant_id definido por backend
     if role == "microempresa":
         tenant_id = _tenant_id_backend()
         if tenant_id is None:
@@ -120,6 +130,10 @@ def create_cliente():
         tenant_id = payload.get("tenant_id")
         if not tenant_id:
             return jsonify({"error": "tenant_id requerido para super_usuario"}), 400
+        try:
+            tenant_id = int(tenant_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "tenant_id inválido"}), 400
 
     nombre = (payload.get("nombre") or "").strip()
     apellido_paterno = (payload.get("apellido_paterno") or "").strip()
@@ -131,7 +145,7 @@ def create_cliente():
     es_empresa = payload.get("es_empresa")
     es_generico = payload.get("es_generico", False)
 
-    if not all([nombre, apellido_materno, ci, email, password]):
+    if not all([nombre, apellido_paterno, ci, email, password]):
         return jsonify({"error": "Todos los campos son requeridos"}), 400
     if not isinstance(es_empresa, bool):
         return jsonify({"error": "es_empresa debe ser boolean"}), 400
@@ -143,7 +157,14 @@ def create_cliente():
     # Email único global
     if Cliente.query.filter_by(email=email).first():
         return jsonify({"error": "Email ya registrado"}), 409
-    if Cliente.query.filter_by(tenant_id=tenant_id, ci=ci).first():
+    exists_ci = (
+        ClienteMicroempresa.query
+        .join(Cliente, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
+        .filter(ClienteMicroempresa.tenant_id == tenant_id)
+        .filter(Cliente.ci == ci)
+        .first()
+    )
+    if exists_ci:
         return jsonify({"error": "CI ya registrado en esta microempresa"}), 409
 
     creation_source = "microempresa" if role == "microempresa" else "independiente"
@@ -151,10 +172,9 @@ def create_cliente():
     temp_password_set_at = datetime.utcnow() if temp_password else None
 
     cliente = Cliente(
-        tenant_id=tenant_id,
         nombre=nombre,
         apellido_paterno=apellido_paterno,
-        apellido_materno=apellido_materno,
+        apellido_materno=apellido_materno or None,
         ci=ci,
         razon_social=razon_social or None,
         es_generico=bool(es_generico),
@@ -170,10 +190,8 @@ def create_cliente():
     db.session.add(cliente)
     db.session.flush()
 
-    if role == "microempresa" and tenant_id:
-        db.session.add(
-            ClienteMicroempresa(id_cliente=cliente.id_cliente, tenant_id=tenant_id)
-        )
+    if tenant_id:
+        db.session.add(ClienteMicroempresa(id_cliente=cliente.id_cliente, tenant_id=tenant_id))
 
     db.session.commit()
     return jsonify({"cliente": cliente_detail(cliente)}), 201
@@ -292,20 +310,33 @@ def update_cliente(cliente_id):
     if apellido_paterno is not None:
         cliente.apellido_paterno = apellido_paterno.strip()
     if apellido_materno is not None:
-        cliente.apellido_materno = apellido_materno.strip()
+        cliente.apellido_materno = (apellido_materno or "").strip() or None
     if ci is not None:
         ci = (ci or "").strip()
         if not ci:
             return jsonify({"error": "CI requerido"}), 400
-        exists_ci = (
-            Cliente.query
-            .filter(Cliente.tenant_id == cliente.tenant_id)
-            .filter(Cliente.ci == ci)
-            .filter(Cliente.id_cliente != cliente.id_cliente)
-            .first()
-        )
-        if exists_ci:
-            return jsonify({"error": "CI ya registrado en esta microempresa"}), 409
+        role = get_current_role(current_user)
+        tenant_ids = []
+        if role in {"microempresa", "empleado"}:
+            tenant_id = _tenant_id_backend()
+            if tenant_id:
+                tenant_ids = [tenant_id]
+        elif role == "super_usuario":
+            tenant_ids = [
+                rel.tenant_id
+                for rel in ClienteMicroempresa.query.filter_by(id_cliente=cliente.id_cliente).all()
+            ]
+        if tenant_ids:
+            exists_ci = (
+                ClienteMicroempresa.query
+                .join(Cliente, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
+                .filter(ClienteMicroempresa.tenant_id.in_(tenant_ids))
+                .filter(Cliente.ci == ci)
+                .filter(Cliente.id_cliente != cliente.id_cliente)
+                .first()
+            )
+            if exists_ci:
+                return jsonify({"error": "CI ya registrado en esta microempresa"}), 409
         cliente.ci = ci
 
     if es_empresa is not None:
@@ -380,7 +411,8 @@ def public_lookup_cliente():
 
     cliente = (
         Cliente.query
-        .filter(Cliente.tenant_id == tenant_id)
+        .join(ClienteMicroempresa, Cliente.id_cliente == ClienteMicroempresa.id_cliente)
+        .filter(ClienteMicroempresa.tenant_id == tenant_id)
         .filter(or_(*filters))
         .order_by(Cliente.id_cliente.desc())
         .first()
@@ -424,7 +456,13 @@ def activate_cliente(cliente_id):
     """
     cliente = Cliente.query.get_or_404(cliente_id)
 
-    if not (is_super_admin() or (is_microempresa() and cliente.tenant_id == _tenant_id_backend())):
+    if not (
+        is_super_admin()
+        or (is_microempresa() and ClienteMicroempresa.query.filter_by(
+            id_cliente=cliente.id_cliente,
+            tenant_id=_tenant_id_backend()
+        ).first())
+    ):
         return jsonify({"error": "No autorizado"}), 403
 
     cliente.estado = "activo"
@@ -442,7 +480,13 @@ def delete_cliente(cliente_id):
     """
     cliente = Cliente.query.get_or_404(cliente_id)
 
-    if not (is_super_admin() or (is_microempresa() and cliente.tenant_id == _tenant_id_backend())):
+    if not (
+        is_super_admin()
+        or (is_microempresa() and ClienteMicroempresa.query.filter_by(
+            id_cliente=cliente.id_cliente,
+            tenant_id=_tenant_id_backend()
+        ).first())
+    ):
         return jsonify({"error": "No autorizado"}), 403
 
     cliente.estado = "inactivo"

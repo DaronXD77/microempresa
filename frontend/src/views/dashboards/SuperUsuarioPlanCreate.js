@@ -13,6 +13,7 @@ export default function SuperUsuarioPlanCreate() {
   const [form, setForm] = useState({
     nombre: "",
     precio: "",
+    dias_validez: "30",
     estado: "activo",
     caracteristicas: ["", ""], // ✅ inicia con 2
   });
@@ -43,6 +44,7 @@ export default function SuperUsuarioPlanCreate() {
     const payload = {
       nombre: (form.nombre || "").trim(),
       precio: form.precio,
+      dias_validez: form.dias_validez,
       estado: form.estado || "activo",
       caracteristicas: (form.caracteristicas || [])
         .map((x) => (x || "").trim())
@@ -98,6 +100,18 @@ export default function SuperUsuarioPlanCreate() {
               step="0.01"
               value={form.precio}
               onChange={(e) => setForm((p) => ({ ...p, precio: e.target.value }))}
+              required
+            />
+          </label>
+
+          <label>
+            Dias de validez
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.dias_validez}
+              onChange={(e) => setForm((p) => ({ ...p, dias_validez: e.target.value }))}
               required
             />
           </label>

@@ -8,7 +8,7 @@ class AdminSu(UserMixin, db.Model):
 
     id_su = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
-    apellido_paterno = db.Column(db.String(100), nullable=False)
+    apellido_paterno = db.Column(db.String(100), nullable=True)
     apellido_materno = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)

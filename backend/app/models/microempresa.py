@@ -18,19 +18,11 @@ class Microempresa(UserMixin, db.Model):
 
     nombre_propietario = db.Column(db.String(100), nullable=False)
     apellido_paterno_propietario = db.Column(db.String(100), nullable=False)
-    apellido_materno_propietario = db.Column(db.String(100), nullable=False)
+    apellido_materno_propietario = db.Column(db.String(100), nullable=True)
 
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)
     estado = db.Column(db.String(20), nullable=False, default="activo")
-
-    # Relación (1 a muchos)
-    clientes = db.relationship(
-        "Cliente",
-        back_populates="microempresa",
-        cascade="all, delete-orphan",
-        lazy="dynamic",
-    )
 
     seguidores = db.relationship(
         "Cliente",

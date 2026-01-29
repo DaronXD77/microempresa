@@ -27,6 +27,7 @@ export default function SuperUsuarioPlanes() {
   const [editForm, setEditForm] = useState({
     nombre: "",
     precio: "",
+    dias_validez: "30",
     estado: "activo",
     caracteristicas: ["", ""],
   });
@@ -97,6 +98,7 @@ export default function SuperUsuarioPlanes() {
     setEditForm({
       nombre: p.nombre || "",
       precio: String(p.precio ?? ""),
+      dias_validez: String(p.dias_validez ?? "30"),
       estado: p.estado || "activo",
       caracteristicas: feats.length ? feats : ["", ""],
     });
@@ -105,7 +107,7 @@ export default function SuperUsuarioPlanes() {
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ nombre: "", precio: "", estado: "activo", caracteristicas: ["", ""] });
+    setEditForm({ nombre: "", precio: "", dias_validez: "30", estado: "activo", caracteristicas: ["", ""] });
   };
 
   const setEditFeature = (idx, value) => {
@@ -134,6 +136,7 @@ export default function SuperUsuarioPlanes() {
     const payload = {
       nombre: (editForm.nombre || "").trim(),
       precio: editForm.precio,
+      dias_validez: editForm.dias_validez,
       estado: editForm.estado,
       caracteristicas: (editForm.caracteristicas || [])
         .map((x) => (x || "").trim())
@@ -250,6 +253,7 @@ export default function SuperUsuarioPlanes() {
                     {!isEditing ? (
                       <>
                         <div className="muted">Estado: {p.estado}</div>
+                        <div className="muted">Validez: {p.dias_validez ?? 0} dias</div>
 
                         {feats.length > 0 && (
                           <ul className="plan-features">
@@ -278,6 +282,17 @@ export default function SuperUsuarioPlanes() {
                               step="0.01"
                               value={editForm.precio}
                               onChange={(e) => setEditForm((s) => ({ ...s, precio: e.target.value }))}
+                            />
+                          </div>
+
+                          <div style={{ width: 180 }}>
+                            <div className="muted" style={{ marginBottom: 6 }}>Dias de validez</div>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={editForm.dias_validez}
+                              onChange={(e) => setEditForm((s) => ({ ...s, dias_validez: e.target.value }))}
                             />
                           </div>
 

@@ -95,8 +95,8 @@ def create_microempresa():
     password = payload.get("password") or ""
 
     # ✅ campos base requeridos
-    if not all([nombre, nombre_prop, apellido_paterno_prop, apellido_materno_prop, email, password]):
-        return jsonify({"error": "Campos requeridos: nombre, propietario, apellidos, email, password"}), 400
+    if not all([nombre, nombre_prop, apellido_paterno_prop, email, password]):
+        return jsonify({"error": "Campos requeridos: nombre, propietario, apellido paterno, email, password"}), 400
 
     # ✅ determinar virtual si no viene tipo_tienda
     if not tipo_tienda:
@@ -125,7 +125,7 @@ def create_microempresa():
         horario_atencion=horario,
         nombre_propietario=nombre_prop,
         apellido_paterno_propietario=apellido_paterno_prop,
-        apellido_materno_propietario=apellido_materno_prop,
+        apellido_materno_propietario=apellido_materno_prop or None,
         email=email,
         password=hash_password(password),
         estado="activo",
@@ -218,7 +218,7 @@ def update_microempresa(tenant_id):
     if apellido_paterno_prop is not None:
         microempresa.apellido_paterno_propietario = apellido_paterno_prop.strip()
     if apellido_materno_prop is not None:
-        microempresa.apellido_materno_propietario = apellido_materno_prop.strip()
+        microempresa.apellido_materno_propietario = (apellido_materno_prop or "").strip() or None
 
     if email is not None:
         email = email.strip()
