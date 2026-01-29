@@ -25,6 +25,9 @@ def public_microempresas():
                 "logo_url": m.logo_url,
                 "qr_url": build_upload_url(m.qr_url) if getattr(m, "qr_url", None) else None,
                 "estado": m.estado,
+                "direccion": m.direccion,
+                "telefono_contacto": m.telefono_contacto,
+                "email": m.email,
             }
             for m in items
         ]

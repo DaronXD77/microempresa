@@ -92,6 +92,7 @@ const emptyForm = {
   es_empresa: "false",
   tipo_tienda: "fisica",
   tenant_id: "",
+  telefono_contacto: "",
 };
 
 const Icon = {
@@ -338,6 +339,7 @@ const AppContent = () => {
         nombre_propietario: user.nombre_propietario || "",
         apellido_paterno_propietario: user.apellido_paterno_propietario || "",
         apellido_materno_propietario: user.apellido_materno_propietario || "",
+        telefono_contacto: user.telefono_contacto || "",
         email: user.email || "",
         password: "",
       }));
@@ -650,16 +652,22 @@ const AppContent = () => {
         const tipo = profileForm.tipo_tienda || "fisica";
 
         if (tipo === "fisica") {
-          if (!profileForm.horario_inicio || !profileForm.horario_fin) {
-            setProfileMessage("Debes seleccionar un rango de horario válido");
-            return;
+          if (profileForm.horario_inicio || profileForm.horario_fin) {
+            if (!profileForm.horario_inicio || !profileForm.horario_fin) {
+              setProfileMessage("Debes seleccionar un rango de horario válido");
+              return;
+            }
+            if (profileForm.horario_inicio >= profileForm.horario_fin) {
+              setProfileMessage("El horario de fin debe ser mayor al de inicio");
+              return;
+            }
           }
-          if (profileForm.horario_inicio >= profileForm.horario_fin) {
-            setProfileMessage("El horario de fin debe ser mayor al de inicio");
-            return;
-          }
-          if (!profileForm.direccion?.trim()) {
-            setProfileMessage("Dirección requerida para tienda física");
+        }
+
+        if (profileForm.telefono_contacto) {
+          const phone = String(profileForm.telefono_contacto || "").trim();
+          if (!/^\d{8}$/.test(phone)) {
+            setProfileMessage("El celular debe tener 8 dígitos");
             return;
           }
         }
@@ -667,14 +675,17 @@ const AppContent = () => {
         const payload = {
           nombre: profileForm.nombre,
           logo_url: profileForm.logo_url,
-          direccion: tipo === "virtual" ? VIRTUAL_DIRECCION : profileForm.direccion,
+          direccion: tipo === "virtual" ? VIRTUAL_DIRECCION : (profileForm.direccion || ""),
           horario_atencion:
             tipo === "virtual"
               ? VIRTUAL_HORARIO
-              : `${profileForm.horario_inicio} - ${profileForm.horario_fin}`,
+              : profileForm.horario_inicio && profileForm.horario_fin
+                ? `${profileForm.horario_inicio} - ${profileForm.horario_fin}`
+                : "",
           nombre_propietario: profileForm.nombre_propietario,
           apellido_paterno_propietario: profileForm.apellido_paterno_propietario,
           apellido_materno_propietario: profileForm.apellido_materno_propietario,
+          telefono_contacto: profileForm.telefono_contacto,
           tipo_tienda: tipo,
         };
 

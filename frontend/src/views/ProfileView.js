@@ -79,12 +79,22 @@ const ProfileView = ({ role, form, message, onChange, onSubmit, isSaving, forceP
           <input name="logo_url" type="url" value={form.logo_url} onChange={onChange} />
         </label>
 
+        <label>
+          Celular de contacto
+          <input
+            name="telefono_contacto"
+            value={form.telefono_contacto}
+            onChange={onChange}
+            placeholder="8 digitos"
+          />
+        </label>
+
         {/* ✅ solo si es física */}
         {form.tipo_tienda === "fisica" ? (
           <>
             <label>
               Dirección
-              <input name="direccion" value={form.direccion} onChange={onChange} required />
+              <input name="direccion" value={form.direccion} onChange={onChange} />
             </label>
 
             <label>

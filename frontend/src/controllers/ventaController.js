@@ -91,6 +91,15 @@ export const rechazarVenta = async (ventaId) => {
   return { response, data };
 };
 
+export const cancelarVenta = async (ventaId) => {
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/cancelar`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
 export const fetchMisPedidos = async (email) => {
   const query = email ? `?email=${encodeURIComponent(email)}` : "";
   const response = await fetch(`${API_BASE}/api/ventas/mis-pedidos${query}`, {

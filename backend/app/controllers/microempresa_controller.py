@@ -88,6 +88,7 @@ def create_microempresa():
     logo_url = (payload.get("logo_url") or "").strip()
     direccion = (payload.get("direccion") or "").strip()
     horario = (payload.get("horario_atencion") or "").strip()
+    telefono_contacto = (payload.get("telefono_contacto") or "").strip()
     nombre_prop = (payload.get("nombre_propietario") or "").strip()
     apellido_paterno_prop = (payload.get("apellido_paterno_propietario") or "").strip()
     apellido_materno_prop = (payload.get("apellido_materno_propietario") or "").strip()
@@ -105,13 +106,18 @@ def create_microempresa():
     if tipo_tienda == "virtual":
         direccion, horario = _apply_virtual_defaults(direccion, horario)
     else:
-        if not direccion or not horario:
-            return jsonify({"error": "Dirección y horario son requeridos para tienda física"}), 400
-        if not is_valid_schedule(horario):
-            return jsonify({"error": "Horario inválido"}), 400
+        if direccion and horario:
+            if not is_valid_schedule(horario):
+                return jsonify({"error": "Horario inválido"}), 400
+        else:
+            direccion, horario = _apply_virtual_defaults(direccion, horario)
 
     if logo_url and not is_valid_url(logo_url):
         return jsonify({"error": "Logo URL inválido"}), 400
+
+    if telefono_contacto:
+        if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+            return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
 
     if Microempresa.query.filter_by(nombre=nombre).first():
         return jsonify({"error": "Microempresa ya existe"}), 409
@@ -126,6 +132,7 @@ def create_microempresa():
         nombre_propietario=nombre_prop,
         apellido_paterno_propietario=apellido_paterno_prop,
         apellido_materno_propietario=apellido_materno_prop or None,
+        telefono_contacto=telefono_contacto or None,
         email=email,
         password=hash_password(password),
         estado="activo",
@@ -150,6 +157,7 @@ def update_microempresa(tenant_id):
     logo_url = payload.get("logo_url")
     direccion = payload.get("direccion")
     horario = payload.get("horario_atencion")
+    telefono_contacto = payload.get("telefono_contacto")
     nombre_prop = payload.get("nombre_propietario")
     apellido_paterno_prop = payload.get("apellido_paterno_propietario")
     apellido_materno_prop = payload.get("apellido_materno_propietario")
@@ -170,13 +178,7 @@ def update_microempresa(tenant_id):
         final_dir = (direccion if direccion is not None else microempresa.direccion) or ""
         final_hor = (horario if horario is not None else microempresa.horario_atencion) or ""
 
-        if not str(final_dir).strip() or "virtual" in str(final_dir).lower():
-            return jsonify({"error": "Dirección requerida para tienda física"}), 400
-
-        if not str(final_hor).strip():
-            return jsonify({"error": "Horario requerido para tienda física"}), 400
-
-        if not is_valid_schedule(str(final_hor).strip()):
+        if str(final_hor).strip() and not is_valid_schedule(str(final_hor).strip()):
             return jsonify({"error": "Horario inválido"}), 400
     else:
         # virtual: si llegan vacíos, ponemos placeholders
@@ -212,6 +214,15 @@ def update_microempresa(tenant_id):
         else:
             # fisica: ya validamos arriba
             microempresa.horario_atencion = h
+
+    if telefono_contacto is not None:
+        telefono_contacto = str(telefono_contacto).strip()
+        if telefono_contacto:
+            if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+                return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
+            microempresa.telefono_contacto = telefono_contacto
+        else:
+            microempresa.telefono_contacto = None
 
     if nombre_prop is not None:
         microempresa.nombre_propietario = nombre_prop.strip()

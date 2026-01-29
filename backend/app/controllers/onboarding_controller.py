@@ -87,6 +87,7 @@ def onboarding_start():
     logo_url = (payload.get("logo_url") or "").strip()
     direccion = (payload.get("direccion") or "").strip()
     horario_atencion = (payload.get("horario_atencion") or "").strip()
+    telefono_contacto = (payload.get("telefono_contacto") or "").strip()
 
     nombre_prop = (payload.get("nombre_propietario") or "").strip()
     ap_pat = (payload.get("apellido_paterno_propietario") or "").strip()
@@ -101,17 +102,23 @@ def onboarding_start():
     if not all([nombre, nombre_prop, ap_pat, email]):
         return jsonify({"error": "Campos requeridos: nombre, propietario, apellido paterno, email."}), 400
 
-    # Dirección/horario solo si NO es virtual
+    # Dirección/horario opcionales; si falta, se considera virtual
     if not is_virtual:
-        if not direccion or not horario_atencion:
-            return jsonify({"error": "Dirección y horario son requeridos para tienda física."}), 400
-        if not is_valid_schedule(horario_atencion):
-            return jsonify({"error": "Horario inválido"}), 400
-    else:
+        if direccion and horario_atencion:
+            if not is_valid_schedule(horario_atencion):
+                return jsonify({"error": "Horario inválido"}), 400
+        else:
+            is_virtual = True
+
+    if is_virtual:
         direccion, horario_atencion = _apply_virtual_defaults(direccion, horario_atencion)
 
     if logo_url and not is_valid_url(logo_url):
         return jsonify({"error": "Logo URL inválido"}), 400
+
+    if telefono_contacto:
+        if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+            return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
 
     # ============================
     # 1) MODO EDICION POR signup_id
@@ -169,6 +176,7 @@ def onboarding_start():
                     microempresa.nombre_propietario = nombre_prop
                     microempresa.apellido_paterno_propietario = ap_pat
                     microempresa.apellido_materno_propietario = ap_mat or None
+                    microempresa.telefono_contacto = telefono_contacto or None
                     microempresa.email = email
 
                     if password:
@@ -228,6 +236,7 @@ def onboarding_start():
         existing.nombre_propietario = nombre_prop
         existing.apellido_paterno_propietario = ap_pat
         existing.apellido_materno_propietario = ap_mat or None
+        existing.telefono_contacto = telefono_contacto or None
 
         if password:
             existing.password = hash_password(password)
@@ -254,6 +263,7 @@ def onboarding_start():
         nombre_propietario=nombre_prop,
         apellido_paterno_propietario=ap_pat,
         apellido_materno_propietario=ap_mat or None,
+        telefono_contacto=telefono_contacto or None,
         email=email,
         password=hash_password(password),
         estado="pendiente",

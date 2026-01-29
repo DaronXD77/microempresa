@@ -14,6 +14,9 @@ from ...services.auth_service import (
     check_microempresa_subscription,
     serialize_user,
 )
+
+VIRTUAL_DIRECCION = "Sin tienda física (virtual)"
+VIRTUAL_HORARIO = "Atención online"
 from ...views.auth import auth_response, guest_response
 
 
@@ -88,6 +91,7 @@ def register():
         logo_url = (payload.get("logo_url") or "").strip()
         direccion = (payload.get("direccion") or "").strip()
         horario = (payload.get("horario_atencion") or "").strip()
+        telefono_contacto = (payload.get("telefono_contacto") or "").strip()
         nombre_prop = (payload.get("nombre_propietario") or "").strip()
         apellido_paterno_prop = (payload.get("apellido_paterno_propietario") or "").strip()
         apellido_materno_prop = (payload.get("apellido_materno_propietario") or "").strip()
@@ -97,8 +101,6 @@ def register():
         if not all(
             [
                 nombre,
-                direccion,
-                horario,
                 nombre_prop,
                 apellido_paterno_prop,
                 email,
@@ -106,6 +108,17 @@ def register():
             ]
         ):
             return jsonify({"error": "Todos los campos son requeridos"}), 400
+
+        if direccion and horario:
+            if not is_valid_schedule(horario):
+                return jsonify({"error": "Horario inválido"}), 400
+        else:
+            direccion = VIRTUAL_DIRECCION
+            horario = VIRTUAL_HORARIO
+
+        if telefono_contacto:
+            if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+                return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
         if logo_url and not is_valid_url(logo_url):
             return jsonify({"error": "Logo URL inválido"}), 400
         if not is_valid_schedule(horario):
@@ -124,6 +137,7 @@ def register():
             nombre_propietario=nombre_prop,
             apellido_paterno_propietario=apellido_paterno_prop,
             apellido_materno_propietario=apellido_materno_prop or None,
+            telefono_contacto=telefono_contacto or None,
             email=email,
             password=hash_password(password),
             estado="activo",

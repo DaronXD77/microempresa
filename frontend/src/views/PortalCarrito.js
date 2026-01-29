@@ -188,6 +188,25 @@ const PortalCarrito = () => {
     setCart(result.cart);
   };
 
+  const handleDecrease = (item) => {
+    const current = Number(item.cantidad || 1);
+    if (current <= 1) {
+      handleRemove(item.id_producto);
+      return;
+    }
+    handleUpdate(item.id_producto, current - 1);
+  };
+
+  const handleIncrease = (item) => {
+    const current = Number(item.cantidad || 1);
+    const stock = Number(item.stock ?? -1);
+    if (Number.isFinite(stock) && stock >= 0 && current + 1 > stock) {
+      setToast({ open: true, message: "Stock insuficiente para este producto.", variant: "warning", onAction: null });
+      return;
+    }
+    handleUpdate(item.id_producto, current + 1);
+  };
+
   const handleRemove = (id) => {
     const { cart: next } = removeCartItem(id);
     setCart(next);
@@ -323,7 +342,7 @@ const PortalCarrito = () => {
     const { response, data } = await login({ username: email, password, role: "cliente" });
     setLoginSaving(false);
     if (!response.ok) {
-      setToast({ open: true, message: data.error || "No se pudo iniciar sesión.", variant: "warning", onAction: null });
+      setToast({ open: true, message: data.error || "Credenciales inválidas.", variant: "warning", onAction: null });
       return;
     }
     setAuthUser(data.user || null);
@@ -551,12 +570,15 @@ const PortalCarrito = () => {
                     </div>
                   </div>
                   <div className="cart-item-actions">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.cantidad}
-                      onChange={(e) => handleUpdate(item.id_producto, e.target.value)}
-                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button type="button" className="ghost-button" onClick={() => handleDecrease(item)}>
+                        -
+                      </button>
+                      <span style={{ minWidth: 24, textAlign: "center" }}>{item.cantidad}</span>
+                      <button type="button" className="ghost-button" onClick={() => handleIncrease(item)}>
+                        +
+                      </button>
+                    </div>
                     <button type="button" className="link-button" onClick={() => handleRemove(item.id_producto)}>
                       Quitar
                     </button>

@@ -9,6 +9,7 @@ def microempresa_item(microempresa):
         # opcional (si quieres mostrarlo en listas):
         "direccion": microempresa.direccion,
         "horario_atencion": microempresa.horario_atencion,
+        "telefono_contacto": microempresa.telefono_contacto,
     }
 
 

@@ -89,6 +89,12 @@ const ClienteMicroempresas = () => {
       <div className="micro-info">
         <div className="micro-name">{micro.nombre}</div>
         {micro.email && <div className="micro-meta">{micro.email}</div>}
+        {micro.telefono_contacto && <div className="micro-meta">{micro.telefono_contacto}</div>}
+        {micro.direccion ? (
+          <div className="micro-meta">{micro.direccion}</div>
+        ) : (
+          <div className="micro-meta">Tienda virtual</div>
+        )}
       </div>
       <div className="micro-actions">
         <Link className="micro-link" to={`/microempresa/${micro.tenant_id}`}>

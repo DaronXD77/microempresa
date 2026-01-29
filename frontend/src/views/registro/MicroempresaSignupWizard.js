@@ -69,6 +69,7 @@ const initialForm = {
   direccion: "", // IMPORTANTE: se mantiene como 'direccion' (se usará para link maps)
   horario_inicio: "",
   horario_fin: "",
+  telefono_contacto: "",
   nombre_propietario: "",
   apellido_paterno_propietario: "",
   apellido_materno_propietario: "",
@@ -293,15 +294,17 @@ export default function MicroempresaSignupWizard() {
     const tipo = form.tipo_tienda;
 
     if (tipo === "fisica") {
-      if (!form.direccion.trim()) {
-        // Solo cambia el mensaje acorde al label
-        setMessage("Link de maps requerido para tienda física.");
-        return;
+      if (form.horario_inicio || form.horario_fin) {
+        if (!validateSchedule()) {
+          setMessage("Horario inválido: el fin debe ser mayor al inicio.");
+          return;
+        }
       }
-      if (!validateSchedule()) {
-        setMessage("Horario inválido: el fin debe ser mayor al inicio.");
-        return;
-      }
+    }
+
+    if (form.telefono_contacto && !/^\d{8}$/.test(form.telefono_contacto)) {
+      setMessage("Celular debe tener 8 digitos.");
+      return;
     }
 
     if (!isEditMode && !form.password) {
@@ -319,18 +322,24 @@ export default function MicroempresaSignupWizard() {
 
     setLoading(true);
     try {
-      const direccionFinal = tipo === "virtual" ? VIRTUAL_DIRECCION : form.direccion.trim();
-      const horarioFinal =
-        tipo === "virtual"
-          ? VIRTUAL_HORARIO
-          : `${form.horario_inicio} - ${form.horario_fin}`;
+      const scheduleOk = validateSchedule();
+      const isVirtual =
+        tipo === "virtual" ||
+        !form.direccion.trim() ||
+        !form.horario_inicio ||
+        !form.horario_fin ||
+        !scheduleOk;
+
+      const direccionFinal = isVirtual ? VIRTUAL_DIRECCION : form.direccion.trim();
+      const horarioFinal = isVirtual ? VIRTUAL_HORARIO : `${form.horario_inicio} - ${form.horario_fin}`;
 
       const payloadBase = {
-        tipo_tienda: tipo,
+        tipo_tienda: isVirtual ? "virtual" : "fisica",
         nombre: form.nombre.trim(),
         logo_url: (form.logo_url || "").trim(),
         direccion: direccionFinal, // IMPORTANTE: se mantiene 'direccion'
         horario_atencion: horarioFinal,
+        telefono_contacto: (form.telefono_contacto || "").trim(),
         nombre_propietario: form.nombre_propietario.trim(),
         apellido_paterno_propietario: (form.apellido_paterno_propietario || "").trim(),
         apellido_materno_propietario: form.apellido_materno_propietario.trim(),
@@ -503,39 +512,46 @@ export default function MicroempresaSignupWizard() {
                     <input name="logo_url" type="url" value={form.logo_url} onChange={onChange} />
                   </label>
 
+                  <label>
+                    Celular de contacto (opcional)
+                    <input
+                      name="telefono_contacto"
+                      value={form.telefono_contacto}
+                      onChange={onChange}
+                      placeholder="8 digitos"
+                    />
+                  </label>
+
                   {form.tipo_tienda === "fisica" ? (
                     <>
                       {/* SOLO CAMBIO DE LABEL: sigue siendo "direccion" */}
                       <label>
-                        Link de Maps
+                        Link de Maps (opcional)
                         <input
                           name="direccion"
                           value={form.direccion}
                           onChange={onChange}
-                          required
                           placeholder="https://maps.google.com/..."
                         />
                       </label>
 
                       <label>
-                        Horario inicio
+                        Horario inicio (opcional)
                         <input
                           name="horario_inicio"
                           type="time"
                           value={form.horario_inicio}
                           onChange={onChange}
-                          required
                         />
                       </label>
 
                       <label>
-                        Horario fin
+                        Horario fin (opcional)
                         <input
                           name="horario_fin"
                           type="time"
                           value={form.horario_fin}
                           onChange={onChange}
-                          required
                         />
                       </label>
                     </>

@@ -12,8 +12,9 @@ class Microempresa(UserMixin, db.Model):
     nombre = db.Column(db.String(150), nullable=False)
 
     logo_url = db.Column(db.Text)
-    direccion = db.Column(db.Text, nullable=False)
-    horario_atencion = db.Column(db.String(100), nullable=False)
+    direccion = db.Column(db.Text, nullable=True)
+    horario_atencion = db.Column(db.String(100), nullable=True)
+    telefono_contacto = db.Column(db.String(20), nullable=True)
     qr_url = db.Column(db.Text)
 
     nombre_propietario = db.Column(db.String(100), nullable=False)
@@ -46,6 +47,7 @@ class Microempresa(UserMixin, db.Model):
             "logo_url": self.logo_url,
             "direccion": self.direccion,
             "horario_atencion": self.horario_atencion,
+            "telefono_contacto": self.telefono_contacto,
             "qr_url": self.qr_url,
             "nombre_propietario": self.nombre_propietario,
             "apellido_paterno_propietario": self.apellido_paterno_propietario,

@@ -140,6 +140,12 @@ const PortalProductos = () => {
   const isFollowing = selectedMicro && followedIds.has(String(selectedMicro.tenant_id));
   const canFollow = authRole === "cliente" && Boolean(authUser?.id_cliente);
 
+  const buildEmbedSrcFromQuery = (query) => {
+    const q = String(query || "").trim();
+    if (!q) return "";
+    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  };
+
   const handleFollow = async () => {
     if (!selectedMicro) return;
     if (!canFollow) {
@@ -355,6 +361,8 @@ const PortalProductos = () => {
                 producto.fotos?.[0]?.url || producto.microempresa?.logo_url
               );
               const detailPath = `${detailBase}/${producto.id_producto}`;
+              const stock = Number(producto.stock ?? 0);
+              const isOutOfStock = Number.isFinite(stock) && stock <= 0;
 
               return (
                 <div key={producto.id_producto} className="product-card">
@@ -383,11 +391,13 @@ const PortalProductos = () => {
                       <span>{(producto.categorias || []).map((c) => c.nombre).join(", ") || "Sin categoria"}</span>
                       <span className="product-link">Ver</span>
                     </div>
+                    {isOutOfStock && <div className="muted" style={{ marginTop: 6 }}>Agotado</div>}
                   </Link>
                   <button
                     type="button"
                     className="primary-button"
                     onClick={() => handleAddToCart(producto)}
+                    disabled={isOutOfStock}
                   >
                     Agregar al carrito
                   </button>
@@ -395,6 +405,26 @@ const PortalProductos = () => {
               );
             })}
           </main>
+
+          {selectedMicro && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div className="form-title">Contacto de la microempresa</div>
+              <div className="muted">Email: {selectedMicro.email || "-"}</div>
+              <div className="muted">Celular: {selectedMicro.telefono_contacto || "-"}</div>
+              <div className="muted">Direccion: {selectedMicro.direccion || "Tienda virtual"}</div>
+              {selectedMicro.direccion ? (
+                <iframe
+                  title="micro-map"
+                  src={buildEmbedSrcFromQuery(selectedMicro.direccion)}
+                  width="100%"
+                  height="240"
+                  style={{ border: 0, borderRadius: 10, marginTop: 8 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
       <ToastModal

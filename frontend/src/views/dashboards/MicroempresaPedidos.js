@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import SectionCard from "../SectionCard";
 import { fetchMe } from "../../controllers/authController";
-import { fetchPedidos, marcarEmpaquetado, rechazarVenta } from "../../controllers/ventaController";
+import { fetchPedidos, marcarEmpaquetado, marcarEntregado, rechazarVenta } from "../../controllers/ventaController";
 import ToastModal from "../ToastModal";
 
 // PDF
@@ -430,6 +430,17 @@ const MicroempresaPedidos = () => {
     await load();
   };
 
+  const handleEntregar = async (ventaId) => {
+    setMessage("");
+    const { response, data } = await marcarEntregado(ventaId);
+    if (!response.ok) {
+      setMessage(data.error || "No se pudo marcar entregado.");
+      return;
+    }
+    setMessage("Pedido entregado.");
+    await load();
+  };
+
   const closePreview = () => {
     if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
     setPreviewFile(null);
@@ -600,6 +611,12 @@ const MicroempresaPedidos = () => {
                         <span className="muted">Pendiente</span>
                       )}
                     </div>
+                    <div>
+                      <div className="muted">Contacto</div>
+                      <div>{micro?.email || "-"}</div>
+                      <div className="muted">{micro?.telefono_contacto || "-"}</div>
+                      <div className="muted">{micro?.direccion || "Tienda virtual"}</div>
+                    </div>
                   </div>
 
                   <div className="pedido-items">
@@ -634,6 +651,7 @@ const MicroempresaPedidos = () => {
                       const locked = actionLock[pedido.id_venta];
                       if (locked === "empaquetado") return <span className="muted">Pedido marcado como empaquetado.</span>;
                       if (locked === "rechazado") return <span className="muted">Pedido denegado.</span>;
+                      if (pedido.estado_envio === "cancelado") return <span className="muted">Pedido cancelado.</span>;
 
                       // Crear opciones (pagado/pendiente)
                       if (pedido.estado_envio === "pagado" || pedido.estado_envio === "pendiente") {
@@ -725,6 +743,15 @@ const MicroempresaPedidos = () => {
                       if (pedido.estado_envio === "empaquetado") {
                         return (
                           <>
+                            {seleccion && (
+                              <button
+                                type="button"
+                                className="primary-button"
+                                onClick={() => handleEntregar(pedido.id_venta)}
+                              >
+                                Marcar entregado
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="ghost-button"

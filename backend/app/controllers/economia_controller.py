@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_login import current_user
 from sqlalchemy import func
 
-from ..models import Compra, DetalleCompra, DetalleVenta, Producto, Venta, db
+from ..models import DetalleVenta, Producto, Venta, db
 from ..services.auth_service import get_current_role, has_permission
 from ..services.product_storage_service import build_producto_foto_url
 
@@ -38,6 +38,7 @@ def list_economia():
         )
         .join(Venta, Venta.id_venta == DetalleVenta.id_venta)
         .filter(Venta.tenant_id == tenant_id)
+        .filter(Venta.estado.in_(["pagado", "empaquetado", "entregado"]))
         .group_by(DetalleVenta.id_producto)
         .all()
     )
@@ -50,19 +51,6 @@ def list_economia():
         for row in ventas
     }
 
-    compras = (
-        db.session.query(
-            DetalleCompra.id_producto.label("id_producto"),
-            func.coalesce(func.sum(DetalleCompra.cantidad * DetalleCompra.precio_unitario), 0).label("costo"),
-        )
-        .join(Compra, Compra.id_compra == DetalleCompra.id_compra)
-        .filter(Compra.tenant_id == tenant_id)
-        .group_by(DetalleCompra.id_producto)
-        .all()
-    )
-
-    compras_map = {row.id_producto: float(row.costo or 0) for row in compras}
-
     productos = Producto.query.filter_by(tenant_id=tenant_id).order_by(Producto.id_producto.desc()).all()
     payload = []
     for producto in productos:
@@ -70,8 +58,10 @@ def list_economia():
         vendido = float(agg["vendido"] or 0)
         ingresos = float(agg["ingresos"] or 0)
         stock_actual = int(producto.stock or 0)
-        costo_invertido = compras_map.get(producto.id_producto, 0.0)
-        saldo = ingresos - costo_invertido
+        precio_compra = float(producto.precio_compra or 0)
+        costo_ventas = vendido * precio_compra
+        costo_inventario = stock_actual * precio_compra
+        saldo = ingresos - costo_ventas
 
         foto_url = None
         if producto.fotos:
@@ -83,12 +73,13 @@ def list_economia():
                 "id_producto": producto.id_producto,
                 "nombre": producto.nombre,
                 "stock": stock_actual,
-                "precio_compra": float(producto.precio_compra or 0),
+                "precio_compra": precio_compra,
                 "precio_unitario": float(producto.precio_unitario or 0),
                 "foto_url": foto_url,
                 "vendido": vendido,
                 "ingresos": ingresos,
-                "costo_invertido": costo_invertido,
+                "costo_invertido": costo_ventas,
+                "costo_inventario": costo_inventario,
                 "saldo": saldo,
             }
         )

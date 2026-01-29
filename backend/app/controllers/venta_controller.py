@@ -2,7 +2,11 @@ from datetime import date, datetime, timedelta
 import os
 import uuid
 
-from flask import Blueprint, jsonify, request, send_from_directory, redirect
+import urllib.request
+import urllib.parse
+from io import BytesIO
+
+from flask import Blueprint, jsonify, request, send_from_directory, redirect, send_file
 from flask_login import current_user
 from sqlalchemy import func
 from ..services.email_service import send_pedido_estado_email
@@ -131,6 +135,8 @@ def _serialize_venta(venta: Venta, tenant_map=None):
             data["microempresa_nombre"] = micro.nombre
             data["microempresa_email"] = micro.email
             data["microempresa_estado"] = micro.estado
+            data["microempresa_direccion"] = micro.direccion
+            data["microempresa_telefono"] = micro.telefono_contacto
     return data
 
 
@@ -415,11 +421,13 @@ def list_pedidos():
         Venta.query.join(Entrega, Entrega.id_venta == Venta.id_venta)
         .filter(Venta.tenant_id == tenant_id)
         .filter(Entrega.tipo_entrega == "virtual")
-        .filter(Venta.estado.in_(["pagado", "empaquetado", "pendiente", "rechazado"]))
+        .filter(Venta.estado.in_(["pagado", "empaquetado", "pendiente", "rechazado", "entregado", "cancelado"]))
         .order_by(Venta.fecha.desc())
         .all()
     )
-    return jsonify({"pedidos": [_serialize_venta(v) for v in ventas]})
+    micro = Microempresa.query.filter_by(tenant_id=tenant_id).first()
+    tenant_map = {micro.tenant_id: micro} if micro else {}
+    return jsonify({"pedidos": [_serialize_venta(v, tenant_map) for v in ventas]})
 
 
 @venta_bp.get("/api/ventas/mis-pedidos")
@@ -430,7 +438,10 @@ def list_mis_pedidos():
             .order_by(Venta.fecha.desc())
             .all()
         )
-        return jsonify({"pedidos": [_serialize_venta(v) for v in ventas]})
+        tenant_ids = {v.tenant_id for v in ventas}
+        micros = Microempresa.query.filter(Microempresa.tenant_id.in_(tenant_ids)).all() if tenant_ids else []
+        tenant_map = {m.tenant_id: m for m in micros}
+        return jsonify({"pedidos": [_serialize_venta(v, tenant_map) for v in ventas]})
 
     email = (request.args.get("email") or "").strip()
     if email:
@@ -442,7 +453,10 @@ def list_mis_pedidos():
                 .order_by(Venta.fecha.desc())
                 .all()
             )
-            return jsonify({"pedidos": [_serialize_venta(v) for v in ventas]})
+            tenant_ids = {v.tenant_id for v in ventas}
+            micros = Microempresa.query.filter(Microempresa.tenant_id.in_(tenant_ids)).all() if tenant_ids else []
+            tenant_map = {m.tenant_id: m for m in micros}
+            return jsonify({"pedidos": [_serialize_venta(v, tenant_map) for v in ventas]})
 
     return jsonify({"pedidos": []})
 
@@ -555,7 +569,20 @@ def download_comprobante(venta_id):
         return jsonify({"error": "Comprobante no encontrado"}), 404
 
     if path.startswith("http://") or path.startswith("https://"):
-        return redirect(path)
+        try:
+            with urllib.request.urlopen(path) as resp:
+                data = resp.read()
+                content_type = resp.headers.get("Content-Type") or "application/octet-stream"
+                parsed = urllib.parse.urlparse(path)
+                filename = os.path.basename(parsed.path) or "comprobante"
+                return send_file(
+                    BytesIO(data),
+                    mimetype=content_type,
+                    download_name=filename,
+                    as_attachment=False,
+                )
+        except Exception:
+            return jsonify({"error": "Comprobante no encontrado"}), 404
 
     if not os.path.exists(path):
         return jsonify({"error": "Comprobante no encontrado"}), 404
@@ -675,9 +702,14 @@ def seleccionar_entrega(venta_id):
 @venta_bp.patch("/api/ventas/<int:venta_id>/entregar")
 def marcar_entregado(venta_id):
     venta = Venta.query.get_or_404(venta_id)
+    role = get_current_role(current_user) if current_user.is_authenticated else None
 
-    if current_user.is_authenticated and get_current_role(current_user) == "cliente":
+    if role == "cliente":
         if venta.id_cliente and venta.id_cliente != current_user.id_cliente:
+            return jsonify({"error": "No autorizado"}), 403
+    elif role in {"microempresa", "empleado"}:
+        tenant_id = _tenant_id()
+        if not tenant_id or venta.tenant_id != tenant_id:
             return jsonify({"error": "No autorizado"}), 403
     else:
         token = request.args.get("token")
@@ -688,10 +720,11 @@ def marcar_entregado(venta_id):
     if entrega:
         if not entrega.seleccion_at or not entrega.seleccion_opcion_id:
             return jsonify({"error": "Debes seleccionar una opcion de entrega"}), 400
-        disponible = entrega.seleccion_at + timedelta(minutes=5)
-        if datetime.utcnow() < disponible:
-            remaining = max(1, int((disponible - datetime.utcnow()).total_seconds() // 60) + 1)
-            return jsonify({"error": f"Debes esperar {remaining} min antes de marcar entregado"}), 400
+        if role == "cliente":
+            disponible = entrega.seleccion_at + timedelta(minutes=5)
+            if datetime.utcnow() < disponible:
+                remaining = max(1, int((disponible - datetime.utcnow()).total_seconds() // 60) + 1)
+                return jsonify({"error": f"Debes esperar {remaining} min antes de marcar entregado"}), 400
 
     venta.estado = "entregado"
     if entrega:
@@ -737,5 +770,37 @@ def rechazar_venta(venta_id):
     entrega = Entrega.query.filter_by(id_venta=venta_id).first()
     if entrega:
         entrega.estado = "rechazado"
+    db.session.commit()
+    return jsonify({"venta": _serialize_venta(venta)})
+
+
+@venta_bp.patch("/api/ventas/<int:venta_id>/cancelar")
+def cancelar_venta(venta_id):
+    error = _require_cliente()
+    if error:
+        return error
+
+    venta = Venta.query.get_or_404(venta_id)
+    if venta.id_cliente and venta.id_cliente != current_user.id_cliente:
+        return jsonify({"error": "No autorizado"}), 403
+
+    if venta.estado in {"entregado", "rechazado", "cancelado"}:
+        return jsonify({"error": "Venta no puede cancelarse"}), 400
+
+    created_at = venta.fecha or datetime.utcnow()
+    if datetime.utcnow() - created_at > timedelta(minutes=5):
+        return jsonify({"error": "Solo puedes cancelar en los primeros 5 minutos"}), 400
+
+    if venta.estado in {"empaquetado", "entregado"}:
+        _adjust_stock(venta.detalles, venta.tenant_id, 1)
+
+    venta.estado = "cancelado"
+    entrega = Entrega.query.filter_by(id_venta=venta_id).first()
+    if entrega:
+        entrega.estado = "cancelado"
+    pago = Pago.query.filter_by(id_venta=venta_id).first()
+    if pago:
+        pago.estado = "cancelado"
+
     db.session.commit()
     return jsonify({"venta": _serialize_venta(venta)})

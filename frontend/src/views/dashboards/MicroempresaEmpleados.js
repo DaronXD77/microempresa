@@ -117,7 +117,7 @@ const MicroempresaEmpleados = () => {
       setMessage(data.error || "No se pudo resetear.");
       return;
     }
-    setMessage("Contraseña reiniciada al CI.");
+    setMessage("Contraseña reiniciada.");
     await load();
   };
 
@@ -304,7 +304,7 @@ const MicroempresaEmpleados = () => {
                       Editar
                     </button>
                     <button type="button" className="ghost-button" onClick={() => handleReset(empleado.id_empleado)}>
-                      Reset CI
+                      Cambiar contrasena
                     </button>
                   </div>
                 </div>

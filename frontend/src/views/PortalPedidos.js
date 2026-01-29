@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchMisPedidos, marcarEntregado, seleccionarEntrega } from "../controllers/ventaController";
+import { cancelarVenta, fetchMisPedidos, marcarEntregado, seleccionarEntrega } from "../controllers/ventaController";
 import ToastModal from "./ToastModal";
 
 const PortalPedidos = () => {
@@ -7,6 +7,8 @@ const PortalPedidos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [message, setMessage] = useState("");
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
+  const [previewFile, setPreviewFile] = useState(null);
+  const API_BASE = (process.env.REACT_APP_API_BASE || "").replace(/\/$/, "");
 
   const load = async () => {
     const { response, data } = await fetchMisPedidos();
@@ -54,11 +56,61 @@ const PortalPedidos = () => {
     await load();
   };
 
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
+  };
+
+  const handleVerComprobante = async (ventaId) => {
+    const url = `${API_BASE}/api/ventas/${ventaId}/comprobante/download`;
+    try {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.error || "No se pudo abrir el comprobante.");
+        return;
+      }
+      const contentType = res.headers.get("content-type") || "";
+      const blob = await res.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      setPreviewFile({
+        url: objectUrl,
+        title: "Comprobante",
+        isPdf: contentType.includes("pdf"),
+      });
+    } catch (err) {
+      setMessage(err?.message || "No se pudo abrir el comprobante.");
+    }
+  };
+
+  const handleCancelar = async (pedido) => {
+    const { response, data } = await cancelarVenta(pedido.id_venta);
+    if (!response.ok) {
+      setMessage(data.error || "No se pudo cancelar el pedido.");
+      return;
+    }
+    setMessage("Pedido cancelado.");
+    await load();
+  };
+
+  const buildEmbedSrcFromQuery = (query) => {
+    const q = String(query || "").trim();
+    if (!q) return "";
+    return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  };
+
   const renderTracker = (estado) => {
     if (estado === "rechazado") {
       return (
         <div className="status-tracker">
           <div className="tracker-step active">rechazado</div>
+        </div>
+      );
+    }
+    if (estado === "cancelado") {
+      return (
+        <div className="status-tracker">
+          <div className="tracker-step active">cancelado</div>
         </div>
       );
     }
@@ -98,6 +150,22 @@ const PortalPedidos = () => {
             onClose={() => setToast({ open: false, message: "", variant: "success" })}
           />
 
+          {previewFile && (
+            <div className="image-modal" onClick={closePreview}>
+              <div className="image-modal-card" onClick={(e) => e.stopPropagation()}>
+                <div className="image-modal-title">{previewFile.title}</div>
+                <button type="button" className="image-modal-close" onClick={closePreview} aria-label="Cerrar">
+                  ×
+                </button>
+                {previewFile.isPdf ? (
+                  <iframe className="image-modal-frame" src={previewFile.url} title={previewFile.title} />
+                ) : (
+                  <img src={previewFile.url} alt={previewFile.title} />
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="pedidos-list">
             {visiblePedidos.length === 0 ? (
               <p className="muted">No hay pedidos registrados.</p>
@@ -133,6 +201,9 @@ const PortalPedidos = () => {
                       if (pedido.estado_envio === "rechazado") {
                         return <span className="error">Pedido denegado por la microempresa</span>;
                       }
+                      if (pedido.estado_envio === "cancelado") {
+                        return <span className="muted">Pedido cancelado</span>;
+                      }
                       const entrega = pedido.entrega || (pedido.entregas || [])[0];
                       const opciones = entrega?.opciones || [];
                       const seleccionId = entrega?.seleccion_opcion_id;
@@ -141,8 +212,21 @@ const PortalPedidos = () => {
                       if (pedido.estado_envio === "entregado") {
                         return <span className="muted">Pedido terminado</span>;
                       }
+                      const createdAt = pedido.created_at ? new Date(pedido.created_at).getTime() : null;
+                      const now = Date.now();
+                      const canCancel = createdAt ? now - createdAt <= 5 * 60 * 1000 : false;
+
                       if (pedido.estado_envio !== "empaquetado") {
-                        return <span className="muted">Esperando actualizacion</span>;
+                        return (
+                          <div style={{ display: "grid", gap: 8 }}>
+                            <span className="muted">Esperando actualizacion</span>
+                            {canCancel && (
+                              <button type="button" className="ghost-button" onClick={() => handleCancelar(pedido)}>
+                                Cancelar pedido
+                              </button>
+                            )}
+                          </div>
+                        );
                       }
                       const now = Date.now();
                       const readyAt = seleccionAt ? seleccionAt + 5 * 60 * 1000 : null;
@@ -205,12 +289,45 @@ const PortalPedidos = () => {
                             </button>
                           ) : (
                             <span className="muted">
-                              El botÃ³n se habilita en {remainingMin ?? 5} min.
+                              El boton se habilita en {remainingMin ?? 5} min.
                             </span>
+                          )}
+                          {canCancel && (
+                            <button type="button" className="ghost-button" onClick={() => handleCancelar(pedido)}>
+                              Cancelar pedido
+                            </button>
                           )}
                         </div>
                       );
                     })()}
+                  </div>
+
+                  <div className="pedido-actions" style={{ marginTop: 10 }}>
+                    {pedido.comprobante_url ? (
+                      <button type="button" className="link-button" onClick={() => handleVerComprobante(pedido.id_venta)}>
+                        Ver comprobante
+                      </button>
+                    ) : (
+                      <span className="muted">Comprobante pendiente</span>
+                    )}
+                  </div>
+
+                  <div className="card" style={{ boxShadow: "none", marginTop: 10 }}>
+                    <div className="form-title">Contacto de la microempresa</div>
+                    <div className="muted">Email: {pedido.microempresa_email || "-"}</div>
+                    <div className="muted">Celular: {pedido.microempresa_telefono || "-"}</div>
+                    <div className="muted">Direccion: {pedido.microempresa_direccion || "Tienda virtual"}</div>
+                    {pedido.microempresa_direccion ? (
+                      <iframe
+                        title={`map-${pedido.id_venta}`}
+                        src={buildEmbedSrcFromQuery(pedido.microempresa_direccion)}
+                        width="100%"
+                        height="200"
+                        style={{ border: 0, borderRadius: 10, marginTop: 8 }}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    ) : null}
                   </div>
                 </div>
               ))

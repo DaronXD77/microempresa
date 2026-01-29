@@ -14,7 +14,7 @@ const emptyProducto = {
   descripcion: "",
   precio_unitario: "",
   precio_compra: "",
-  stock: "",
+  stock: "0",
   stock_minimo: "",
   categoria_ids: [],
 };
@@ -250,13 +250,8 @@ const MicroempresaCompras = () => {
     setMessage("El precio de compra debe ser menor al precio de venta.");
     return;
   }
-  const stockValue = Number(productoForm.stock);
-  if (!stockValue || stockValue <= 0) {
-    setMessage("Stock invalido.");
-    return;
-  }
-  const stockMinimoValue = Number(productoForm.stock_minimo);
-  if (!stockMinimoValue || stockMinimoValue <= 0) {
+  const stockMinimoValue = Number(productoForm.stock_minimo || 0);
+  if (Number.isNaN(stockMinimoValue) || stockMinimoValue < 0) {
     setMessage("Stock minimo invalido.");
     return;
   }
@@ -266,7 +261,7 @@ const MicroempresaCompras = () => {
     descripcion: (productoForm.descripcion || "").trim(),
     precio_unitario: precioVenta,
     precio_compra: precioCompraProducto,
-    stock: stockValue,
+    stock: 0,
     stock_minimo: stockMinimoValue,
     estado: "activo",
     proveedor_id: Number(proveedorId),
@@ -606,23 +601,10 @@ const MicroempresaCompras = () => {
                   />
                 </label>
                 <label>
-                  Stock
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={productoForm.stock}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setProductoForm({ ...productoForm, stock: value });
-                    }}
-                  />
-                </label>
-                <label>
                   Stock minimo
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     step="1"
                     value={productoForm.stock_minimo}
                     onChange={(e) => setProductoForm({ ...productoForm, stock_minimo: e.target.value })}
