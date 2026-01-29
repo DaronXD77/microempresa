@@ -3,6 +3,7 @@ import json
 import os
 import smtplib
 import urllib.request
+from urllib.error import HTTPError
 from email.message import EmailMessage
 from typing import Optional
 
@@ -37,9 +38,13 @@ def send_email(to_email: str, subject: str, body: str, *, is_html: bool = False)
             method="POST",
         )
         timeout = float(os.environ.get("MAIL_TIMEOUT", "10"))
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            if response.status >= 400:
-                raise RuntimeError("Resend devolvió un error al enviar correo")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                if response.status >= 400:
+                    raise RuntimeError("Resend devolvió un error al enviar correo")
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="ignore")
+            raise RuntimeError(f"Resend error {exc.code}: {detail}") from exc
         return
 
     if not host or not user or not password:
