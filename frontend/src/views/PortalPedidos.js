@@ -228,7 +228,6 @@ const PortalPedidos = () => {
                           </div>
                         );
                       }
-                      const now = Date.now();
                       const readyAt = seleccionAt ? seleccionAt + 5 * 60 * 1000 : null;
                       const ready = readyAt ? now >= readyAt : false;
                       const remainingMin = readyAt ? Math.max(0, Math.ceil((readyAt - now) / 60000)) : null;

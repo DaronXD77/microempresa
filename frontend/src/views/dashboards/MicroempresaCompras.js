@@ -299,7 +299,7 @@ const MicroempresaCompras = () => {
     // Selecciona el producto recién creado
     if (producto?.id_producto) {
       setProductoId(String(producto.id_producto));
-      setCantidad(stockValue);
+      setCantidad(1);
       setPrecioCompra(String(precioCompraProducto));
     }
 
