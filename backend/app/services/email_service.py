@@ -1,16 +1,46 @@
 import os
+import json
 import os
 import smtplib
+import urllib.request
 from email.message import EmailMessage
 from typing import Optional
 
 
 def send_email(to_email: str, subject: str, body: str, *, is_html: bool = False):
+    resend_key = os.environ.get("RESEND_API_KEY")
     host = os.environ.get("MAIL_HOST")
     port = int(os.environ.get("MAIL_PORT", "587"))
     user = os.environ.get("MAIL_USER")
     password = os.environ.get("MAIL_PASS")
     mail_from = os.environ.get("MAIL_FROM", user)
+
+    if resend_key:
+        if not mail_from:
+            raise RuntimeError("Falta MAIL_FROM para enviar con Resend")
+        payload = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": subject,
+            "html": body if is_html else None,
+            "text": None if is_html else body,
+        }
+        payload = {k: v for k, v in payload.items() if v is not None}
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        timeout = float(os.environ.get("MAIL_TIMEOUT", "10"))
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            if response.status >= 400:
+                raise RuntimeError("Resend devolvió un error al enviar correo")
+        return
 
     if not host or not user or not password:
         raise RuntimeError("Faltan variables MAIL_HOST/MAIL_USER/MAIL_PASS en el .env")
