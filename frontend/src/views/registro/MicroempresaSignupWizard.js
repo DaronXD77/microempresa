@@ -129,6 +129,7 @@ export default function MicroempresaSignupWizard() {
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
   const [systemQrUrl, setSystemQrUrl] = useState("");
   const [qrPreviewError, setQrPreviewError] = useState(false);
+  const [qrReloadKey, setQrReloadKey] = useState(0);
   const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
 
   const onChange = (e) => {
@@ -756,7 +757,7 @@ export default function MicroempresaSignupWizard() {
                         <div className="qr-card">
                           {systemQrUrl ? (
                             <img
-                              src={resolveAssetUrl(systemQrUrl)}
+                              src={`${resolveAssetUrl(systemQrUrl)}${resolveAssetUrl(systemQrUrl).includes("?") ? "&" : "?"}t=${qrReloadKey}`}
                               alt="QR de pago"
                               className="qr-image"
                               onClick={() => setQrPreviewOpen(true)}
@@ -820,11 +821,24 @@ export default function MicroempresaSignupWizard() {
                 ×
               </button>
               {qrPreviewError ? (
-                <div className="muted">No se pudo cargar el QR.</div>
+                <div className="muted" style={{ display: "grid", gap: 8, minHeight: 160 }}>
+                  <span>No se pudo cargar el QR.</span>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => {
+                      setQrPreviewError(false);
+                      setQrReloadKey((v) => v + 1);
+                    }}
+                  >
+                    Reintentar
+                  </button>
+                </div>
               ) : (
                 <img
-                  src={resolveAssetUrl(systemQrUrl)}
+                  src={`${resolveAssetUrl(systemQrUrl)}${resolveAssetUrl(systemQrUrl).includes("?") ? "&" : "?"}t=${qrReloadKey}`}
                   alt="QR de pago"
+                  style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}
                   onError={() => setQrPreviewError(true)}
                 />
               )}

@@ -1117,21 +1117,26 @@ const AppContent = () => {
 export default function App() {
   useEffect(() => {
     if (!window.Capacitor) return;
-    const handler = CapacitorApp.addListener("backButton", async () => {
-      const hash = window.location.hash || "";
-      if (hash && hash !== "#/" && hash !== "#/") {
-        window.history.back();
-        return;
-      }
-      const res = await Dialog.confirm({
-        title: "Salir",
-        message: "¿Deseas salir de la aplicación?",
-        okButtonTitle: "Salir",
-        cancelButtonTitle: "Cancelar",
+    let handler;
+    (async () => {
+      handler = await CapacitorApp.addListener("backButton", async () => {
+        const hash = window.location.hash || "";
+        if (hash && hash !== "#/" && hash !== "#/") {
+          window.history.back();
+          return;
+        }
+        const res = await Dialog.confirm({
+          title: "Salir",
+          message: "¿Deseas salir de la aplicación?",
+          okButtonTitle: "Salir",
+          cancelButtonTitle: "Cancelar",
+        });
+        if (res.value) CapacitorApp.exitApp();
       });
-      if (res.value) CapacitorApp.exitApp();
-    });
-    return () => handler.remove();
+    })();
+    return () => {
+      if (handler) handler.remove();
+    };
   }, []);
 
   return (

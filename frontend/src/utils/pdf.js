@@ -5,15 +5,11 @@ const isMobileLike = () => {
   return /android|iphone|ipad|ipod/i.test(ua);
 };
 
-const cleanupModal = (modal, url) => {
-  try {
-    if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
-  } finally {
-    if (url) URL.revokeObjectURL(url);
-  }
+const cleanupModal = (modal) => {
+  if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
 };
 
-const openPdfModal = (src, title, revokeUrl = null) => {
+const openPdfModal = async (data, title) => {
   const existing = document.getElementById("pdf-modal");
   if (existing) existing.remove();
 
@@ -29,8 +25,8 @@ const openPdfModal = (src, title, revokeUrl = null) => {
   modal.style.padding = "16px";
 
   const card = document.createElement("div");
-  card.style.width = "min(720px, 94vw)";
-  card.style.maxHeight = "80vh";
+  card.style.width = "min(900px, 96vw)";
+  card.style.maxHeight = "85vh";
   card.style.background = "#fff";
   card.style.borderRadius = "16px";
   card.style.padding = "14px";
@@ -38,6 +34,7 @@ const openPdfModal = (src, title, revokeUrl = null) => {
   card.style.gap = "10px";
   card.style.position = "relative";
   card.style.boxShadow = "0 20px 46px rgba(0,0,0,0.22)";
+  card.style.overflow = "auto";
 
   const titleEl = document.createElement("div");
   titleEl.textContent = title || "Reporte";
@@ -57,57 +54,56 @@ const openPdfModal = (src, title, revokeUrl = null) => {
   close.style.background = "#fff";
   close.style.fontSize = "20px";
   close.style.cursor = "pointer";
-  close.onclick = () => cleanupModal(modal, revokeUrl);
+  close.onclick = () => cleanupModal(modal);
 
-  const frame = document.createElement("iframe");
-  frame.src = src;
-  frame.title = title || "Reporte";
-  frame.style.width = "100%";
-  frame.style.height = "70vh";
-  frame.style.border = "0";
-  frame.style.borderRadius = "12px";
+  const pagesWrap = document.createElement("div");
+  pagesWrap.style.display = "grid";
+  pagesWrap.style.gap = "12px";
 
-  const object = document.createElement("object");
-  object.data = src;
-  object.type = "application/pdf";
-  object.style.width = "100%";
-  object.style.height = "70vh";
-  object.style.border = "0";
-  object.style.borderRadius = "12px";
+  const loading = document.createElement("div");
+  loading.textContent = "Cargando PDF...";
+  loading.style.fontSize = "13px";
+  loading.style.color = "#4b5563";
 
-  const fallback = document.createElement("div");
-  fallback.textContent = "No se pudo mostrar el PDF. Mantén presionado para abrir.";
-  fallback.style.fontSize = "13px";
-  fallback.style.color = "#4b5563";
-  fallback.style.textAlign = "center";
-  fallback.style.padding = "8px 0";
-
-  modal.onclick = () => cleanupModal(modal, revokeUrl);
+  modal.onclick = () => cleanupModal(modal);
   card.onclick = (e) => e.stopPropagation();
 
   card.appendChild(titleEl);
   card.appendChild(close);
-  card.appendChild(object);
-  card.appendChild(frame);
-  card.appendChild(fallback);
+  card.appendChild(loading);
+  card.appendChild(pagesWrap);
   modal.appendChild(card);
   document.body.appendChild(modal);
+
+  try {
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
+    const pdf = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
+
+    loading.remove();
+
+    for (let i = 1; i <= pdf.numPages; i += 1) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1.25 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = "100%";
+      canvas.style.borderRadius = "12px";
+      canvas.style.border = "1px solid #e5e7eb";
+      await page.render({ canvasContext: context, viewport }).promise;
+      pagesWrap.appendChild(canvas);
+    }
+  } catch (err) {
+    loading.textContent = "No se pudo mostrar el PDF.";
+  }
 };
 
 export const openPdf = async (doc, filename) => {
   try {
     if (isMobileLike()) {
-      if (window.Capacitor) {
-        const { Browser } = await import("@capacitor/browser");
-        const dataUrl = doc.output("datauristring");
-        if (dataUrl) {
-          await Browser.open({ url: dataUrl });
-          return;
-        }
-      }
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
-      openPdfModal(url, filename || "Reporte", url);
+      const data = doc.output("arraybuffer");
+      await openPdfModal(data, filename || "Reporte");
       return;
     }
   } catch (e) {
