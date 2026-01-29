@@ -54,7 +54,7 @@ const buildEmbedSrcFromUrl = (value, fallbackText = "") => {
       const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
       if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
       if (host.includes("maps.app.goo.gl") || host.includes("goo.gl")) {
-        return toEmbed(raw);
+        return fallback ? toEmbed(fallback) : toEmbed(raw);
       }
       if (host.includes("google.com") && url.pathname.startsWith("/maps")) {
         const withEmbed = raw.includes("output=embed")
@@ -665,12 +665,19 @@ const MicroempresaPedidos = () => {
                      <div className="card" style={{ boxShadow: "none" }}>
                        <div className="form-title">Entrega seleccionada</div>
                        {seleccion ? (
-                         <div className="muted">
-                           {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto} (
-                           <a href={seleccion.maps_url} target="_blank" rel="noopener noreferrer">
-                             Ver mapa
+                         <div className="muted" style={{ display: "grid", gap: 8 }}>
+                           <div>
+                             {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto}
+                           </div>
+                           <a
+                             className="ghost-button"
+                             href={seleccion.maps_url}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             style={{ width: "fit-content" }}
+                           >
+                             Abrir en Maps
                            </a>
-                           )
                          </div>
                        ) : (
                          <div className="muted">Esperando selección del cliente.</div>

@@ -819,13 +819,20 @@ select {
 
 .proveedores-table-wrap {
   overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid #eef0f3;
+  border-radius: 12px;
+  padding: 6px;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 .proveedores-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px;
+  min-width: 680px;
   table-layout: fixed;
+  box-sizing: border-box;
 }
 
 .proveedores-table th,
@@ -834,6 +841,7 @@ select {
   padding: 10px 12px;
   vertical-align: top;
   word-break: break-word;
+  box-sizing: border-box;
 }
 
 .proveedores-table th {
@@ -853,6 +861,16 @@ select {
   gap: 8px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .proveedores-table {
+    min-width: 560px;
+  }
+
+  .proveedores-actions {
+    flex-direction: column;
+  }
 }
 
 .proveedores-table td input {

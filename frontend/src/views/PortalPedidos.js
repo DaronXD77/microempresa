@@ -109,7 +109,7 @@ const PortalPedidos = () => {
         const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
         if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
         if (host.includes("maps.app.goo.gl") || host.includes("goo.gl")) {
-          return toEmbed(raw);
+          return fallback ? toEmbed(fallback) : toEmbed(raw);
         }
         if (host.includes("google.com") && url.pathname.startsWith("/maps")) {
           const withEmbed = raw.includes("output=embed")
@@ -123,6 +123,15 @@ const PortalPedidos = () => {
       return fallback ? toEmbed(fallback) : "";
     }
     return toEmbed(raw);
+  };
+
+  const buildMapsLink = (value, fallbackText = "") => {
+    const raw = String(value || "").trim();
+    const fallback = String(fallbackText || "").trim();
+    if (raw.startsWith("http")) return raw;
+    if (!raw && fallback) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fallback)}`;
+    if (!raw) return "";
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(raw)}`;
   };
 
   const isVirtualDireccion = (value) => {
@@ -297,10 +306,17 @@ const PortalPedidos = () => {
                                         {opt.fecha} {opt.hora_inicio} - {opt.hora_fin}
                                       </div>
                                     </div>
-                                    <div className="muted">
-                                      <a href={opt.maps_url} target="_blank" rel="noopener noreferrer">
-                                        Ver mapa
-                                      </a>
+                                    <div className="muted" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      {buildMapsLink(opt.maps_url, opt.lugar_texto) ? (
+                                        <a
+                                          className="ghost-button"
+                                          href={buildMapsLink(opt.maps_url, opt.lugar_texto)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          Abrir en Maps
+                                        </a>
+                                      ) : null}
                                     </div>
                                     <button
                                       type="button"
@@ -321,12 +337,20 @@ const PortalPedidos = () => {
                         <div className="card" style={{ boxShadow: "none" }}>
                           <div className="form-title">Tu entrega</div>
                           {seleccion ? (
-                            <div className="muted">
-                              {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto} (
-                              <a href={seleccion.maps_url} target="_blank" rel="noopener noreferrer">
-                                Ver mapa
-                              </a>
-                              )
+                            <div className="muted" style={{ display: "grid", gap: 8 }}>
+                              <div>
+                                {seleccion.fecha} {seleccion.hora_inicio} - {seleccion.hora_fin} - {seleccion.lugar_texto}
+                              </div>
+                              {buildMapsLink(seleccion.maps_url, seleccion.lugar_texto) ? (
+                                <a
+                                  className="ghost-button"
+                                  href={buildMapsLink(seleccion.maps_url, seleccion.lugar_texto)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Abrir en Maps
+                                </a>
+                              ) : null}
                             </div>
                           ) : (
                             <div className="muted">Opcion seleccionada.</div>
@@ -393,6 +417,17 @@ const PortalPedidos = () => {
                           loading="lazy"
                           referrerPolicy="no-referrer-when-downgrade"
                         />
+                      ) : null}
+                      {isPhysicalStore(pedido) && buildMapsLink(pedido.microempresa_direccion) ? (
+                        <a
+                          className="ghost-button"
+                          href={buildMapsLink(pedido.microempresa_direccion)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ marginTop: 8, width: "fit-content" }}
+                        >
+                          Abrir en Maps
+                        </a>
                       ) : null}
                       {isPhysicalStore(pedido) && (
                         <div className="info-callout" style={{ marginTop: 10 }}>
