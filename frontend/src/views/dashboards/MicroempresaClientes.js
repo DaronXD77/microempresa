@@ -224,19 +224,31 @@ export default function MicroempresaClientes() {
 </html>`;
   };
 
-  const downloadReport = (cliente) => {
+  const downloadReport = async (cliente) => {
     const html = buildReportHtml(cliente);
-    const isMobile = typeof window !== "undefined" && (/android|iphone|ipad|ipod/i.test(navigator.userAgent) || window.Capacitor);
+    const filename = `reporte_cliente_${cliente?.id_cliente || "cliente"}.html`;
+    const isMobile = typeof window !== "undefined" && window.Capacitor;
     if (isMobile) {
-      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-      window.location.href = dataUrl;
-      return;
+      try {
+        const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        const base64 = btoa(unescape(encodeURIComponent(html)));
+        await Filesystem.writeFile({
+          path: filename,
+          data: base64,
+          directory: Directory.Downloads,
+          recursive: true,
+        });
+        setToast({ open: true, message: `Archivo guardado en Descargas: ${filename}`, variant: "success" });
+        return;
+      } catch (e) {
+        setToast({ open: true, message: "No se pudo guardar en Descargas.", variant: "warning" });
+      }
     }
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `reporte_cliente_${cliente?.id_cliente || "cliente"}.html`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();

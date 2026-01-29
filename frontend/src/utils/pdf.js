@@ -27,7 +27,7 @@ const cleanupModal = (modal) => {
   if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
 };
 
-const openPdfModal = async (data, title) => {
+const openPdfModal = async (data, title, onDownload) => {
   const existing = document.getElementById("pdf-modal");
   if (existing) existing.remove();
 
@@ -62,9 +62,6 @@ const openPdfModal = async (data, title) => {
   const close = document.createElement("button");
   close.textContent = "×";
   close.setAttribute("aria-label", "Cerrar");
-  close.style.position = "absolute";
-  close.style.top = "10px";
-  close.style.right = "10px";
   close.style.width = "34px";
   close.style.height = "34px";
   close.style.borderRadius = "999px";
@@ -73,6 +70,21 @@ const openPdfModal = async (data, title) => {
   close.style.fontSize = "20px";
   close.style.cursor = "pointer";
   close.onclick = () => cleanupModal(modal);
+
+  const download = document.createElement("button");
+  download.textContent = "Descargar";
+  download.style.border = "1px solid #111827";
+  download.style.background = "#111827";
+  download.style.color = "#fff";
+  download.style.borderRadius = "10px";
+  download.style.padding = "8px 14px";
+  download.style.fontWeight = "600";
+  download.style.cursor = "pointer";
+  download.onclick = async () => {
+    if (typeof onDownload === "function") {
+      await onDownload();
+    }
+  };
 
   const fallback = document.createElement("div");
   fallback.textContent = "No se pudo mostrar el PDF.";
@@ -94,8 +106,19 @@ const openPdfModal = async (data, title) => {
   modal.onclick = () => cleanupModal(modal);
   card.onclick = (e) => e.stopPropagation();
 
-  card.appendChild(titleEl);
-  card.appendChild(close);
+  const header = document.createElement("div");
+  header.style.display = "flex";
+  header.style.alignItems = "center";
+  header.style.justifyContent = "space-between";
+  header.style.gap = "10px";
+  header.appendChild(titleEl);
+  const actions = document.createElement("div");
+  actions.style.display = "flex";
+  actions.style.gap = "8px";
+  actions.appendChild(download);
+  actions.appendChild(close);
+  header.appendChild(actions);
+  card.appendChild(header);
   card.appendChild(loading);
   card.appendChild(pagesWrap);
   card.appendChild(fallback);
@@ -125,15 +148,49 @@ const openPdfModal = async (data, title) => {
   }
 };
 
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+const downloadBrowser = (buffer, filename) => {
+  const blob = new Blob([buffer], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
 export const openPdf = async (doc, filename) => {
-  try {
-    if (isMobileLike()) {
-      const data = doc.output("arraybuffer");
-      await openPdfModal(data, filename || "Reporte");
+  const safeName = filename || "reporte.pdf";
+  const data = doc.output("arraybuffer");
+
+  const handleDownload = async () => {
+    if (typeof window !== "undefined" && window.Capacitor) {
+      try {
+        const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        const base64 = arrayBufferToBase64(data);
+        await Filesystem.writeFile({
+          path: safeName,
+          data: base64,
+          directory: Directory.Downloads,
+          recursive: true,
+        });
+      } catch (e) {
+        downloadBrowser(data, safeName);
+      }
       return;
     }
-  } catch (e) {
-    // fallback to download
-  }
-  doc.save(filename);
+    downloadBrowser(data, safeName);
+  };
+
+  await openPdfModal(data, safeName, handleDownload);
 };

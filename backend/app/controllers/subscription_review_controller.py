@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+import os
 
 from flask import Blueprint, jsonify, send_from_directory, request, current_app, redirect
 from flask_login import current_user
@@ -65,14 +66,31 @@ def download_proof(signup_id: int):
     if not sol.comprobante_path:
         return jsonify({"error": "No hay comprobante"}), 404
 
-    if sol.comprobante_path.startswith("http://") or sol.comprobante_path.startswith("https://"):
-        return redirect(sol.comprobante_path)
+    raw_path = sol.comprobante_path
+    if raw_path.startswith("http://") or raw_path.startswith("https://"):
+        return redirect(raw_path)
 
-    if not os.path.exists(sol.comprobante_path):
-        return jsonify({"error": "No hay comprobante"}), 404
+    path = os.path.normpath(raw_path)
+    if not os.path.isabs(path):
+        backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        path = os.path.normpath(os.path.join(backend_root, path))
 
-    directory = os.path.dirname(sol.comprobante_path)
-    filename = os.path.basename(sol.comprobante_path)
+    if not os.path.exists(path):
+        base = current_app.config.get("UPLOAD_FOLDER") or "uploads"
+        if not os.path.isabs(base):
+            backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            base = os.path.join(backend_root, base)
+        filename = os.path.basename(raw_path)
+        candidates = [
+            os.path.join(base, "comprobantes", str(sol.tenant_id), filename),
+            os.path.join(base, "suscripciones", str(sol.tenant_id), filename),
+        ]
+        path = next((c for c in candidates if os.path.exists(c)), None)
+        if not path:
+            return jsonify({"error": "No hay comprobante"}), 404
+
+    directory = os.path.dirname(path)
+    filename = os.path.basename(path)
     return send_from_directory(directory, filename, as_attachment=True)
 
 
