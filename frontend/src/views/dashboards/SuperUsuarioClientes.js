@@ -529,9 +529,7 @@ const SuperUsuarioClientes = ({
                           />
                         </td>
 
-                        <td style={cell}>
-                          {tenantName} {tenantId != null ? `(#${tenantId})` : ""}
-                        </td>
+                        <td style={cell}>{tenantLabel}</td>
 
                         <td style={cell}>
                           <span style={estadoStyle(item.estado)}>{item.estado}</span>
