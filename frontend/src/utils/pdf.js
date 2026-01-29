@@ -9,7 +9,7 @@ const cleanupModal = (modal) => {
   if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
 };
 
-const openPdfModal = async (data, title) => {
+const openPdfModal = (src, title) => {
   const existing = document.getElementById("pdf-modal");
   if (existing) existing.remove();
 
@@ -56,54 +56,52 @@ const openPdfModal = async (data, title) => {
   close.style.cursor = "pointer";
   close.onclick = () => cleanupModal(modal);
 
-  const pagesWrap = document.createElement("div");
-  pagesWrap.style.display = "grid";
-  pagesWrap.style.gap = "12px";
+  const frame = document.createElement("iframe");
+  frame.src = src;
+  frame.title = title || "Reporte";
+  frame.style.width = "100%";
+  frame.style.height = "70vh";
+  frame.style.border = "0";
+  frame.style.borderRadius = "12px";
 
-  const loading = document.createElement("div");
-  loading.textContent = "Cargando PDF...";
-  loading.style.fontSize = "13px";
-  loading.style.color = "#4b5563";
+  const object = document.createElement("object");
+  object.data = src;
+  object.type = "application/pdf";
+  object.style.width = "100%";
+  object.style.height = "70vh";
+  object.style.border = "0";
+  object.style.borderRadius = "12px";
+
+  const fallback = document.createElement("div");
+  fallback.textContent = "No se pudo mostrar el PDF.";
+  fallback.style.fontSize = "13px";
+  fallback.style.color = "#4b5563";
+  fallback.style.textAlign = "center";
+  fallback.style.padding = "8px 0";
 
   modal.onclick = () => cleanupModal(modal);
   card.onclick = (e) => e.stopPropagation();
 
   card.appendChild(titleEl);
   card.appendChild(close);
-  card.appendChild(loading);
-  card.appendChild(pagesWrap);
+  card.appendChild(object);
+  card.appendChild(frame);
+  card.appendChild(fallback);
   modal.appendChild(card);
   document.body.appendChild(modal);
-
-  try {
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
-    const pdf = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
-
-    loading.remove();
-
-    for (let i = 1; i <= pdf.numPages; i += 1) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.25 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = "100%";
-      canvas.style.borderRadius = "12px";
-      canvas.style.border = "1px solid #e5e7eb";
-      await page.render({ canvasContext: context, viewport }).promise;
-      pagesWrap.appendChild(canvas);
-    }
-  } catch (err) {
-    loading.textContent = "No se pudo mostrar el PDF.";
-  }
 };
 
 export const openPdf = async (doc, filename) => {
   try {
     if (isMobileLike()) {
-      const data = doc.output("arraybuffer");
-      await openPdfModal(data, filename || "Reporte");
+      const dataUrl = doc.output("datauristring");
+      if (dataUrl) {
+        openPdfModal(dataUrl, filename || "Reporte");
+        return;
+      }
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      openPdfModal(url, filename || "Reporte");
       return;
     }
   } catch (e) {

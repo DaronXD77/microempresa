@@ -765,6 +765,7 @@ export default function MicroempresaSignupWizard() {
                                 setQrPreviewError(true);
                                 e.currentTarget.alt = "QR no disponible";
                               }}
+                              referrerPolicy="no-referrer"
                             />
                           ) : (
                             <div className="muted qr-placeholder">QR no disponible</div>
@@ -840,6 +841,7 @@ export default function MicroempresaSignupWizard() {
                   alt="QR de pago"
                   style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}
                   onError={() => setQrPreviewError(true)}
+                  referrerPolicy="no-referrer"
                 />
               )}
             </div>
