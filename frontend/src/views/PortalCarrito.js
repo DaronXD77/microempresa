@@ -302,10 +302,19 @@ const PortalCarrito = () => {
   };
 
   const handleRegistroSubmit = async () => {
-    if (!cart?.tenant_id) {
+    if (!registroForm.nombre.trim()) {
       setToast({
         open: true,
-        message: "Selecciona una microempresa antes de registrarte.",
+        message: "Nombre requerido.",
+        variant: "warning",
+        onAction: null,
+      });
+      return;
+    }
+    if (!registroForm.apellido_paterno.trim()) {
+      setToast({
+        open: true,
+        message: "Apellido paterno requerido.",
         variant: "warning",
         onAction: null,
       });
@@ -340,7 +349,6 @@ const PortalCarrito = () => {
     }
 
     const payload = {
-      tenant_id: cart.tenant_id,
       nombre: registroForm.nombre.trim(),
       apellido_paterno: registroForm.apellido_paterno.trim(),
       apellido_materno: registroForm.apellido_materno.trim(),
@@ -543,43 +551,66 @@ const PortalCarrito = () => {
             <div className="checkout-alert">
               <div className="form-title">Registro rapido</div>
               <div className="checkout-grid">
-                <input
-                  placeholder="Nombre"
-                  name="nombre"
-                  value={registroForm.nombre}
-                  onChange={handleRegistroChange}
-                />
-                <input
-                  placeholder="Apellido paterno"
-                  name="apellido_paterno"
-                  value={registroForm.apellido_paterno}
-                  onChange={handleRegistroChange}
-                />
-                <input
-                  placeholder="Apellido materno"
-                  name="apellido_materno"
-                  value={registroForm.apellido_materno}
-                  onChange={handleRegistroChange}
-                />
-                <input
-                  placeholder="CI"
-                  name="ci"
-                  value={registroForm.ci}
-                  onChange={handleRegistroChange}
-                />
-                <input
-                  placeholder="Email"
-                  name="email"
-                  value={registroForm.email}
-                  onChange={handleRegistroChange}
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  name="password"
-                  value={registroForm.password}
-                  onChange={handleRegistroChange}
-                />
+                <label>
+                  Nombre
+                  <input
+                    placeholder="Nombre"
+                    name="nombre"
+                    value={registroForm.nombre}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Apellido paterno
+                  <input
+                    placeholder="Apellido paterno"
+                    name="apellido_paterno"
+                    value={registroForm.apellido_paterno}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Apellido materno (opcional)
+                  <input
+                    placeholder="Apellido materno"
+                    name="apellido_materno"
+                    value={registroForm.apellido_materno}
+                    onChange={handleRegistroChange}
+                  />
+                </label>
+                <label>
+                  CI
+                  <input
+                    placeholder="CI"
+                    name="ci"
+                    value={registroForm.ci}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Email
+                  <input
+                    placeholder="Email"
+                    name="email"
+                    value={registroForm.email}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    name="password"
+                    value={registroForm.password}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
               </div>
               <label className="inline-check">
                 <input
@@ -591,12 +622,16 @@ const PortalCarrito = () => {
                 Soy empresa
               </label>
               {registroForm.es_empresa && (
-                <input
-                  placeholder="Razón social"
-                  name="razon_social"
-                  value={registroForm.razon_social}
-                  onChange={handleRegistroChange}
-                />
+                <label>
+                  Razon social
+                  <input
+                    placeholder="Razón social"
+                    name="razon_social"
+                    value={registroForm.razon_social}
+                    onChange={handleRegistroChange}
+                    required
+                  />
+                </label>
               )}
               <button
                 type="button"
