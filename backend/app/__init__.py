@@ -37,8 +37,15 @@ def create_app():
 
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url and db_url.startswith("postgresql") and "sslmode=" not in db_url:
+        db_url = f"{db_url}?sslmode=require"
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", "300")),
+    }
     session_samesite = os.environ.get("SESSION_COOKIE_SAMESITE", "None")
     app.config["SESSION_COOKIE_SAMESITE"] = session_samesite
     app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "1") in (

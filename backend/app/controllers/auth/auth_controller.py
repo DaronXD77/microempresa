@@ -89,6 +89,8 @@ def register():
     if role == "microempresa":
         nombre = (payload.get("nombre") or "").strip()
         logo_url = (payload.get("logo_url") or "").strip()
+        if logo_url.startswith("www."):
+            logo_url = f"https://{logo_url}"
         direccion = (payload.get("direccion") or "").strip()
         horario = (payload.get("horario_atencion") or "").strip()
         telefono_contacto = (payload.get("telefono_contacto") or "").strip()
@@ -109,9 +111,13 @@ def register():
         ):
             return jsonify({"error": "Todos los campos son requeridos"}), 400
 
-        if direccion and horario:
+        if direccion or horario:
+            if not direccion or not horario:
+                return jsonify({"error": "Dirección y horario son requeridos para tienda física"}), 400
             if not is_valid_schedule(horario):
                 return jsonify({"error": "Horario inválido"}), 400
+            if not telefono_contacto:
+                return jsonify({"error": "Celular de contacto requerido"}), 400
         else:
             direccion = VIRTUAL_DIRECCION
             horario = VIRTUAL_HORARIO

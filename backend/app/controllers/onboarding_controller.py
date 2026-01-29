@@ -85,6 +85,8 @@ def onboarding_start():
     tipo_tienda_raw = payload.get("tipo_tienda")
     nombre = (payload.get("nombre") or "").strip()
     logo_url = (payload.get("logo_url") or "").strip()
+    if logo_url.startswith("www."):
+        logo_url = f"https://{logo_url}"
     direccion = (payload.get("direccion") or "").strip()
     horario_atencion = (payload.get("horario_atencion") or "").strip()
     telefono_contacto = (payload.get("telefono_contacto") or "").strip()
@@ -102,23 +104,23 @@ def onboarding_start():
     if not all([nombre, nombre_prop, ap_pat, email]):
         return jsonify({"error": "Campos requeridos: nombre, propietario, apellido paterno, email."}), 400
 
-    # Dirección/horario opcionales; si falta, se considera virtual
+    # Dirección/horario obligatorios si es física
     if not is_virtual:
-        if direccion and horario_atencion:
-            if not is_valid_schedule(horario_atencion):
-                return jsonify({"error": "Horario inválido"}), 400
-        else:
-            is_virtual = True
-
-    if is_virtual:
+        if not direccion or not horario_atencion:
+            return jsonify({"error": "Dirección y horario son requeridos para tienda física."}), 400
+        if not is_valid_schedule(horario_atencion):
+            return jsonify({"error": "Horario inválido"}), 400
+    else:
         direccion, horario_atencion = _apply_virtual_defaults(direccion, horario_atencion)
 
     if logo_url and not is_valid_url(logo_url):
         return jsonify({"error": "Logo URL inválido"}), 400
 
-    if telefono_contacto:
-        if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
-            return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
+    if not telefono_contacto:
+        if not is_virtual:
+            return jsonify({"error": "Celular de contacto requerido"}), 400
+    elif not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+        return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
 
     # ============================
     # 1) MODO EDICION POR signup_id

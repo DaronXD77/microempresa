@@ -146,6 +146,19 @@ const MicroempresaPOS = () => {
     );
   };
 
+  const decreaseCantidad = (id) => {
+    const item = cart.find((c) => c.id_producto === id);
+    if (!item) return;
+    const nextQty = Math.max(1, Number(item.cantidad || 1) - 1);
+    updateCantidad(id, nextQty);
+  };
+
+  const increaseCantidad = (id) => {
+    const item = cart.find((c) => c.id_producto === id);
+    if (!item) return;
+    updateCantidad(id, Number(item.cantidad || 1) + 1);
+  };
+
   const removeItem = (id) => {
     setCart((prev) => prev.filter((item) => item.id_producto !== id));
   };
@@ -432,12 +445,15 @@ const MicroempresaPOS = () => {
                   <div className="muted">Bs {item.precio_unitario}</div>
                 </div>
                 <div className="pos-cart-actions">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.cantidad}
-                    onChange={(e) => updateCantidad(item.id_producto, e.target.value)}
-                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button type="button" className="ghost-button" onClick={() => decreaseCantidad(item.id_producto)}>
+                      -
+                    </button>
+                    <span style={{ minWidth: 24, textAlign: "center" }}>{item.cantidad}</span>
+                    <button type="button" className="ghost-button" onClick={() => increaseCantidad(item.id_producto)}>
+                      +
+                    </button>
+                  </div>
                   <button type="button" className="link-button" onClick={() => removeItem(item.id_producto)}>
                     Quitar
                   </button>
@@ -518,6 +534,7 @@ const MicroempresaPOS = () => {
                     razon_social: next === "empresa" ? prev.razon_social : "",
                   }));
                 }}
+                disabled={Boolean(selectedClienteId)}
               >
                 <option value="nuevo">Nuevo cliente</option>
                 <option value="persona">Persona</option>
@@ -551,28 +568,33 @@ const MicroempresaPOS = () => {
                 value={ciInput}
                 onChange={(e) => handleClienteCi(e.target.value)}
                 onKeyDown={handleCiKeyDown}
+                disabled={Boolean(selectedClienteId)}
               />
               <input
                 placeholder="Nombre"
                 value={cliente.nombre}
                 onChange={(e) => handleClienteNombre(e.target.value)}
                 list="cliente-nombres"
+                disabled={Boolean(selectedClienteId)}
               />
               <input
                 placeholder="Apellido paterno"
                 value={cliente.apellido_paterno}
                 onChange={(e) => setCliente((prev) => ({ ...prev, apellido_paterno: e.target.value }))}
+                disabled={Boolean(selectedClienteId)}
               />
               <input
                 placeholder="Apellido materno"
                 value={cliente.apellido_materno}
                 onChange={(e) => setCliente((prev) => ({ ...prev, apellido_materno: e.target.value }))}
+                disabled={Boolean(selectedClienteId)}
               />
               {clienteMode === "empresa" && (
                 <input
                   placeholder="Razon social"
                   value={cliente.razon_social}
                   onChange={(e) => setCliente((prev) => ({ ...prev, razon_social: e.target.value }))}
+                  disabled={Boolean(selectedClienteId)}
                 />
               )}
               <input
@@ -580,6 +602,7 @@ const MicroempresaPOS = () => {
                 value={cliente.email}
                 onChange={(e) => handleClienteEmail(e.target.value)}
                 list="cliente-emails"
+                disabled={Boolean(selectedClienteId)}
               />
               <datalist id="cliente-emails">
                 {clientes.map((c) => (

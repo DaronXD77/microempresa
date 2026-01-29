@@ -20,7 +20,8 @@ def send_email(to_email: str, subject: str, text_body: str) -> None:
     msg["To"] = to_email
     msg.set_content(text_body)
 
-    with smtplib.SMTP(host, port) as server:
+    timeout = float(os.environ.get("MAIL_TIMEOUT", "10"))
+    with smtplib.SMTP(host, port, timeout=timeout) as server:
         server.ehlo()
         if use_tls:
             server.starttls()

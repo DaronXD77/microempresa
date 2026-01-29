@@ -294,11 +294,21 @@ export default function MicroempresaSignupWizard() {
     const tipo = form.tipo_tienda;
 
     if (tipo === "fisica") {
-      if (form.horario_inicio || form.horario_fin) {
-        if (!validateSchedule()) {
-          setMessage("Horario inválido: el fin debe ser mayor al inicio.");
-          return;
-        }
+      if (!form.direccion.trim()) {
+        setMessage("Link de maps requerido para tienda física.");
+        return;
+      }
+      if (!form.horario_inicio || !form.horario_fin) {
+        setMessage("Horario requerido para tienda física.");
+        return;
+      }
+      if (!validateSchedule()) {
+        setMessage("Horario inválido: el fin debe ser mayor al inicio.");
+        return;
+      }
+      if (!/^\d{8}$/.test(form.telefono_contacto || "")) {
+        setMessage("Celular de contacto requerido (8 dígitos).");
+        return;
       }
     }
 
@@ -322,14 +332,7 @@ export default function MicroempresaSignupWizard() {
 
     setLoading(true);
     try {
-      const scheduleOk = validateSchedule();
-      const isVirtual =
-        tipo === "virtual" ||
-        !form.direccion.trim() ||
-        !form.horario_inicio ||
-        !form.horario_fin ||
-        !scheduleOk;
-
+      const isVirtual = tipo === "virtual";
       const direccionFinal = isVirtual ? VIRTUAL_DIRECCION : form.direccion.trim();
       const horarioFinal = isVirtual ? VIRTUAL_HORARIO : `${form.horario_inicio} - ${form.horario_fin}`;
 
@@ -513,12 +516,13 @@ export default function MicroempresaSignupWizard() {
                   </label>
 
                   <label>
-                    Celular de contacto (opcional)
+                    Celular de contacto
                     <input
                       name="telefono_contacto"
                       value={form.telefono_contacto}
                       onChange={onChange}
                       placeholder="8 digitos"
+                      required={form.tipo_tienda === "fisica"}
                     />
                   </label>
 
@@ -526,32 +530,35 @@ export default function MicroempresaSignupWizard() {
                     <>
                       {/* SOLO CAMBIO DE LABEL: sigue siendo "direccion" */}
                       <label>
-                        Link de Maps (opcional)
+                        Link de Maps
                         <input
                           name="direccion"
                           value={form.direccion}
                           onChange={onChange}
+                          required={form.tipo_tienda === "fisica"}
                           placeholder="https://maps.google.com/..."
                         />
                       </label>
 
                       <label>
-                        Horario inicio (opcional)
+                        Horario inicio
                         <input
                           name="horario_inicio"
                           type="time"
                           value={form.horario_inicio}
                           onChange={onChange}
+                          required={form.tipo_tienda === "fisica"}
                         />
                       </label>
 
                       <label>
-                        Horario fin (opcional)
+                        Horario fin
                         <input
                           name="horario_fin"
                           type="time"
                           value={form.horario_fin}
                           onChange={onChange}
+                          required={form.tipo_tienda === "fisica"}
                         />
                       </label>
                     </>

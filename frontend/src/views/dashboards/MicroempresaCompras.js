@@ -410,11 +410,7 @@ const MicroempresaCompras = () => {
     setProveedorSearch("");
     await load();
 
-    const compra = data.compra;
-    if (compra && compra.pdf_url) {
-      const url = compra.pdf_url.startsWith("http") ? compra.pdf_url : `${API_BASE}${compra.pdf_url}`;
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
+    // El PDF se descarga manualmente desde Historial de compras (detalle)
   };
 
   return (

@@ -167,6 +167,11 @@ const PortalProductos = () => {
     return toEmbed(raw);
   };
 
+  const isVirtualDireccion = (value) => {
+    const text = String(value || "").toLowerCase();
+    return text.includes("virtual") || text.includes("sin tienda");
+  };
+
   const handleFollow = async () => {
     if (!selectedMicro) return;
     if (!canFollow) {
@@ -432,8 +437,12 @@ const PortalProductos = () => {
               <div className="form-title">Contacto de la microempresa</div>
               <div className="muted">Email: {selectedMicro.email || "-"}</div>
               <div className="muted">Celular: {selectedMicro.telefono_contacto || "-"}</div>
-              <div className="muted">Direccion: {selectedMicro.direccion || "Tienda virtual"}</div>
-              {selectedMicro.direccion ? (
+              <div className="muted">
+                Direccion: {selectedMicro.direccion && !isVirtualDireccion(selectedMicro.direccion)
+                  ? selectedMicro.direccion
+                  : "Tienda virtual"}
+              </div>
+              {selectedMicro.direccion && !isVirtualDireccion(selectedMicro.direccion) ? (
                 <iframe
                   title="micro-map"
                   src={buildEmbedSrcFromQuery(selectedMicro.direccion)}

@@ -183,13 +183,9 @@ const MicroempresaInventario = () => {
           acc.valorCompra += stockActual * precioCompra;
           acc.valorVenta += stockActual * precioVenta;
 
-          // vendidas = inicial - actual (no < 0)
-          const vendidas = Math.max(0, stockInicial - stockActual);
-          acc.vendidasTotal += vendidas;
-
           return acc;
         },
-        { stockTotal: 0, lowCount: 0, valorCompra: 0, valorVenta: 0, vendidasTotal: 0 }
+        { stockTotal: 0, lowCount: 0, valorCompra: 0, valorVenta: 0 }
       );
 
       // PDF
@@ -228,7 +224,7 @@ const MicroempresaInventario = () => {
       // Resumen en líneas
       doc.setFontSize(11);
       doc.text(
-        `Productos: ${totalProductos}   |   Stock total: ${resumen.stockTotal}   |   Bajo stock: ${resumen.lowCount}   |   Vendidas (estim): ${resumen.vendidasTotal}`,
+        `Productos: ${totalProductos}   |   Stock total: ${resumen.stockTotal}   |   Bajo stock: ${resumen.lowCount}`,
         marginX,
         y
       );
@@ -247,8 +243,6 @@ const MicroempresaInventario = () => {
         const proveedor = p.proveedor_id ? proveedorMap.get(String(p.proveedor_id)) : null;
         const stockInicial = p.stock_inicial ?? p.stock ?? 0;
         const stockActual = p.stock ?? 0;
-        const vendidas = Math.max(0, Number(stockInicial || 0) - Number(stockActual || 0));
-
         return [
           String(p.nombre || "-"),
           String(proveedor?.nombre || "-"),
@@ -256,7 +250,6 @@ const MicroempresaInventario = () => {
           `Bs ${Number(p.precio_compra || 0).toFixed(2)}`,
           String(stockInicial),
           String(stockActual),
-          String(vendidas),
           String(p.stock_minimo ?? 0),
           String(p.estado || "-"),
         ];
@@ -286,7 +279,6 @@ const MicroempresaInventario = () => {
           "Precio compra",
           "Stock inicial",
           "Stock actual",
-          "Vendidas",
           "Stock mínimo",
           "Estado",
         ]],
@@ -355,7 +347,6 @@ const MicroempresaInventario = () => {
             <div>Precio compra</div>
             <div>Stock inicial</div>
             <div>Stock actual</div>
-            <div>Vendidas</div>
             <div>Stock minimo</div>
             <div>Estado</div>
             <div>Acciones</div>
@@ -368,7 +359,6 @@ const MicroempresaInventario = () => {
               const low = producto.stock <= producto.stock_minimo;
               const stockInicial = producto.stock_inicial ?? producto.stock;
               const stockActual = producto.stock ?? 0;
-              const vendidas = Math.max(0, stockInicial - stockActual);
               const fotoUrl = resolveAssetUrl(producto.fotos?.[0]?.url || "");
               const proveedor = producto.proveedor_id ? proveedorMap.get(String(producto.proveedor_id)) : null;
 
@@ -395,7 +385,6 @@ const MicroempresaInventario = () => {
                   <div>Bs {Number(producto.precio_compra || 0).toFixed(2)}</div>
                   <div>{stockInicial}</div>
                   <div>{stockActual}</div>
-                  <div>{vendidas}</div>
                   <div>{producto.stock_minimo}</div>
                   <div>
                     <span className={`status-pill ${producto.estado === "activo" ? "active" : ""}`}>

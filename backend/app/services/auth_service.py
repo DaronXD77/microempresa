@@ -30,6 +30,9 @@ def serialize_user(user):
         return data, "microempresa"
     if isinstance(user, Empleado):
         data = user.to_dict()
+        micro = Microempresa.query.filter_by(tenant_id=user.tenant_id).first()
+        if micro:
+            data["microempresa_nombre"] = micro.nombre
         data["is_owner"] = False
         return data, "empleado"
     if isinstance(user, Cliente):
