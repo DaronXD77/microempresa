@@ -49,6 +49,8 @@ const PortalProductoDetalle = () => {
 
   const imageUrl = images[activeIndex] || "";
   const categorias = (producto?.categorias || []).map((cat) => cat.nombre).filter(Boolean);
+  const stockValue = Number(producto?.stock ?? 0);
+  const isOutOfStock = Number.isFinite(stockValue) && stockValue <= 0;
 
   useEffect(() => {
     setActiveIndex(0);
@@ -198,14 +200,25 @@ const PortalProductoDetalle = () => {
                   <div>
                     <span className="detail-label">Stock</span>
                     <p>{producto.stock}</p>
+                    {isOutOfStock && <span className="muted">Agotado</span>}
                   </div>
                 </div>
 
                 <div className="detail-actions">
-                  <button type="button" className="primary-button" onClick={() => handleAddToCart(false)}>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => handleAddToCart(false)}
+                    disabled={isOutOfStock}
+                  >
                     Agregar al carrito
                   </button>
-                  <button type="button" className="ghost-button" onClick={() => handleAddToCart(true)}>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => handleAddToCart(true)}
+                    disabled={isOutOfStock}
+                  >
                     Comprar ahora
                   </button>
                 </div>

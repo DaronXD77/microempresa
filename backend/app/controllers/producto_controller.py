@@ -365,6 +365,7 @@ def public_productos():
     tenant_id = request.args.get("tenant_id")
     categoria_id = request.args.get("categoria_id")
     search = (request.args.get("q") or "").strip().lower()
+    stock_filter = (request.args.get("stock") or "all").strip().lower()
 
     tenant_id_value = None
     categoria_id_value = None
@@ -384,8 +385,12 @@ def public_productos():
     query = (
         db.session.query(Producto)
         .filter(Producto.estado == "activo")
-        .filter(Producto.stock > 0)
     )
+
+    if stock_filter in {"in", "in_stock", "stock"}:
+        query = query.filter(Producto.stock > 0)
+    elif stock_filter in {"out", "out_of_stock", "agotados"}:
+        query = query.filter(Producto.stock <= 0)
 
     if tenant_id_value is not None:
         query = query.filter(Producto.tenant_id == tenant_id_value)
@@ -432,7 +437,6 @@ def public_producto_detalle(producto_id):
     producto = Producto.query.filter(
         Producto.id_producto == producto_id,
         Producto.estado == "activo",
-        Producto.stock > 0,
     ).first()
     if not producto:
         return jsonify({"error": "Producto no encontrado"}), 404

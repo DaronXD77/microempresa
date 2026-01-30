@@ -18,6 +18,7 @@ const PortalProductos = () => {
   const location = useLocation();
   const [activeCategoryId, setActiveCategoryId] = useState("");
   const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
   const [productos, setProductos] = useState([]);
   const [microempresas, setMicroempresas] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -37,6 +38,7 @@ const PortalProductos = () => {
         tenant_id: selectedTenant || undefined,
         categoria_id: activeCategoryId || undefined,
         q: search || undefined,
+        stock: stockFilter || undefined,
       }),
       fetchPublicMicroempresas(),
       fetchPublicCategorias(),
@@ -50,7 +52,7 @@ const PortalProductos = () => {
     if (categoriasRes.response.ok) {
       setCategorias(categoriasRes.data.categorias || []);
     }
-  }, [activeCategoryId, search, selectedTenant]);
+  }, [activeCategoryId, search, selectedTenant, stockFilter]);
 
   useEffect(() => {
     let mounted = true;
@@ -124,7 +126,7 @@ const PortalProductos = () => {
       load();
     }, 350);
     return () => clearTimeout(handler);
-  }, [search, activeCategoryId, load]);
+  }, [search, activeCategoryId, stockFilter, load]);
 
   const visibleProductos = useMemo(() => productos, [productos]);
   const headerCategorias = categorias.slice(0, 4);
@@ -377,6 +379,19 @@ const PortalProductos = () => {
                     {micro.nombre}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="sidebar-section">
+              <div className="sidebar-title">STOCK</div>
+              <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value)}
+                className="sidebar-select"
+              >
+                <option value="all">Todos</option>
+                <option value="in_stock">Con stock</option>
+                <option value="out_of_stock">Agotados</option>
               </select>
             </div>
           </aside>
