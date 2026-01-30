@@ -9,6 +9,7 @@ from flask import current_app
 
 
 def send_email(to_email: str, subject: str, text_body: str) -> None:
+    brevo_key = os.environ.get("BREVO_API_KEY")
     resend_key = os.environ.get("RESEND_API_KEY")
     host = current_app.config.get("MAIL_HOST")
     port = int(current_app.config.get("MAIL_PORT", 587))
@@ -16,6 +17,36 @@ def send_email(to_email: str, subject: str, text_body: str) -> None:
     user = current_app.config.get("MAIL_USER")
     password = current_app.config.get("MAIL_PASS")
     mail_from = current_app.config.get("MAIL_FROM") or user
+
+    if brevo_key:
+        if not mail_from:
+            raise RuntimeError("Falta MAIL_FROM para enviar con Brevo")
+        sender_name = os.environ.get("MAIL_FROM_NAME") or "Microempresa"
+        payload = {
+            "sender": {"name": sender_name, "email": mail_from},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "textContent": text_body,
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=data,
+            headers={
+                "api-key": brevo_key,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        timeout = float(os.environ.get("MAIL_TIMEOUT", "10"))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                if response.status >= 400:
+                    raise RuntimeError("Brevo devolvio un error al enviar correo")
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="ignore")
+            raise RuntimeError(f"Brevo error {exc.code}: {detail}") from exc
+        return
 
     if resend_key:
         if not mail_from:
