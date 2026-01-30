@@ -1782,6 +1782,10 @@ select {
     gap: 12px;
   }
 
+  .portal-contact-card {
+    grid-column: auto;
+  }
+
   .product-card {
     gap: 8px;
     padding-bottom: 12px;
@@ -2085,6 +2089,11 @@ select {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px;
+}
+
+.portal-contact-card {
+  grid-column: 2 / -1;
+  width: 100%;
 }
 
 .product-card {

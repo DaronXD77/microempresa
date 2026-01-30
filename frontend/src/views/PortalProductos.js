@@ -142,7 +142,7 @@ const PortalProductos = () => {
   const isFollowing = selectedMicro && followedIds.has(String(selectedMicro.tenant_id));
   const canFollow = authRole === "cliente" && Boolean(authUser?.id_cliente);
 
-  const buildEmbedSrcFromQuery = (value, fallbackText = "") => {
+  const buildEmbedSrcFromUrl = (value, fallbackText = "") => {
     const raw = String(value || "").trim();
     const fallback = String(fallbackText || "").trim();
     const toEmbed = (query) => `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
@@ -151,10 +151,14 @@ const PortalProductos = () => {
     if (raw.startsWith("http")) {
       try {
         const url = new URL(raw);
+        const host = url.hostname || "";
         const q = url.searchParams.get("q") || url.searchParams.get("query");
         if (q) return toEmbed(q);
         const match = url.pathname.match(/\/maps\/place\/([^/]+)/);
         if (match?.[1]) return toEmbed(decodeURIComponent(match[1].replace(/\+/g, " ")));
+        if (host.includes("maps.app.goo.gl") || host.includes("goo.gl")) {
+          return fallback ? toEmbed(fallback) : toEmbed(raw);
+        }
         if (url.hostname.includes("google.com") && url.pathname.startsWith("/maps")) {
           const withEmbed = raw.includes("output=embed")
             ? raw
@@ -164,7 +168,7 @@ const PortalProductos = () => {
       } catch {
         // ignore
       }
-      return fallback ? toEmbed(fallback) : raw;
+      return fallback ? toEmbed(fallback) : "";
     }
     return toEmbed(raw);
   };
@@ -448,7 +452,7 @@ const PortalProductos = () => {
           </main>
 
           {selectedMicro && (
-            <div className="card" style={{ marginTop: 16 }}>
+            <div className="card portal-contact-card" style={{ marginTop: 16 }}>
               <div className="form-title">Contacto de la microempresa</div>
               <div className="muted">Email: {selectedMicro.email || "-"}</div>
               <div className="muted">Celular: {selectedMicro.telefono_contacto || "-"}</div>
@@ -460,7 +464,7 @@ const PortalProductos = () => {
               {selectedMicro.direccion && !isVirtualDireccion(selectedMicro.direccion) ? (
                 <iframe
                   title="micro-map"
-                  src={buildEmbedSrcFromQuery(selectedMicro.direccion)}
+                  src={buildEmbedSrcFromUrl(selectedMicro.direccion)}
                   width="100%"
                   height="240"
                   style={{ border: 0, borderRadius: 10, marginTop: 8 }}
