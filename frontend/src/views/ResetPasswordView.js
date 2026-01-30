@@ -11,21 +11,23 @@ export default function ResetPasswordView() {
   const initialRole =
     location.state?.role || localStorage.getItem("pwreset_role") || "";
 
-  const [email, setEmail] = useState(initialEmail);
-  const [role, setRole] = useState(initialRole);
+  const [email] = useState(initialEmail);
+  const [role] = useState(initialRole);
   const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const hasIdentity = email.trim() && role.trim();
+
   const canSubmit = useMemo(() => {
-    if (!email.trim()) return false;
+    if (!hasIdentity) return false;
     if (!token.trim()) return false;
     if (!newPassword) return false;
     if (newPassword !== confirm) return false;
     return true;
-  }, [email, token, newPassword, confirm]);
+  }, [hasIdentity, token, newPassword, confirm]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,7 +75,7 @@ export default function ResetPasswordView() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            readOnly
             required
           />
         </label>
@@ -82,10 +84,16 @@ export default function ResetPasswordView() {
           Rol (si aplica)
           <input
             value={role}
-            onChange={(e) => setRole(e.target.value)}
             placeholder="microempresa / cliente / super_usuario"
+            readOnly
           />
         </label>
+
+        {!hasIdentity && (
+          <p className="error">
+            Falta el correo o el rol. Vuelve a solicitar el token para continuar.
+          </p>
+        )}
 
         <label>
           Token

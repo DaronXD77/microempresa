@@ -32,12 +32,20 @@ export const fetchSystemQrPublic = async () => {
 // ==============================
 
 // Paso 1: crear / editar microempresa PENDIENTE (sin login)
-export const startMicroempresaOnboarding = async (payload) => {
+export const startMicroempresaOnboarding = async (payload, logoFile) => {
+  const formData = new FormData();
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(key, String(value));
+  });
+  if (logoFile) {
+    formData.append("logo", logoFile);
+  }
+
   const response = await fetch(`${API_BASE}/api/onboarding/microempresa/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(payload),
+    body: formData,
   });
   const data = await safeJson(response);
   return { response, data };

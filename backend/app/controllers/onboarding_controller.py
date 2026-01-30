@@ -8,6 +8,7 @@ from ..extensions import db
 from ..models import Microempresa, Plan, SuscripcionSolicitud
 from ..services.auth_service import hash_password, is_valid_schedule, is_valid_url
 from ..services.cloudinary_service import is_configured as cloudinary_configured, upload_file
+from ..services.microempresa_storage_service import save_microempresa_logo
 
 onboarding_bp = Blueprint("onboarding", __name__)
 
@@ -78,14 +79,15 @@ def _apply_virtual_defaults(direccion: str, horario: str) -> tuple[str, str]:
 
 @onboarding_bp.post("/api/onboarding/microempresa/start")
 def onboarding_start():
-    payload = request.get_json(silent=True) or {}
+    payload = request.form if request.form else (request.get_json(silent=True) or {})
 
     signup_id_raw = str(payload.get("signup_id") or ""). strip()
 
     tipo_tienda_raw = payload.get("tipo_tienda")
     nombre = (payload.get("nombre") or "").strip()
+    logo_file = request.files.get("logo") or request.files.get("logo_file") or request.files.get("file")
     logo_url = (payload.get("logo_url") or "").strip()
-    if logo_url.startswith("www."):
+    if not logo_file and logo_url.startswith("www."):
         logo_url = f"https://{logo_url}"
     direccion = (payload.get("direccion") or "").strip()
     horario_atencion = (payload.get("horario_atencion") or "").strip()
@@ -113,7 +115,9 @@ def onboarding_start():
     else:
         direccion, horario_atencion = _apply_virtual_defaults(direccion, horario_atencion)
 
-    if logo_url and not is_valid_url(logo_url):
+    if logo_file:
+        logo_url = ""
+    elif logo_url and not is_valid_url(logo_url):
         return jsonify({"error": "Logo URL inválido"}), 400
 
     if not telefono_contacto:
@@ -172,6 +176,11 @@ def onboarding_start():
                         return jsonify({"error": "Microempresa ya existe (nombre en uso)"}), 409
 
                     microempresa.nombre = nombre
+                    if logo_file:
+                        try:
+                            logo_url = save_microempresa_logo(logo_file, microempresa.tenant_id)
+                        except ValueError as exc:
+                            return jsonify({"error": str(exc)}), 400
                     microempresa.logo_url = logo_url or None
                     microempresa.direccion = direccion
                     microempresa.horario_atencion = horario_atencion
@@ -232,6 +241,11 @@ def onboarding_start():
             return jsonify({"error": "Microempresa ya existe (nombre en uso)"}), 409
 
         existing.nombre = nombre
+        if logo_file:
+            try:
+                logo_url = save_microempresa_logo(logo_file, existing.tenant_id)
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
         existing.logo_url = logo_url or None
         existing.direccion = direccion
         existing.horario_atencion = horario_atencion
@@ -272,6 +286,12 @@ def onboarding_start():
     )
     db.session.add(microempresa)
     db.session.flush()
+
+    if logo_file:
+        try:
+            microempresa.logo_url = save_microempresa_logo(logo_file, microempresa.tenant_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
 
     raw_token, token_hash, expires = SuscripcionSolicitud.generate_onboarding_token()
 

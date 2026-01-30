@@ -11,11 +11,33 @@ export const updateAdmin = async (id, payload) => {
 };
 
 export const updateMicroempresa = async (id, payload) => {
+  const isFormData = payload instanceof FormData;
+  const hasLogoFile = payload && payload.logo_file instanceof File;
+
+  let body = payload;
+  let headers = undefined;
+
+  if (!isFormData && hasLogoFile) {
+    const formData = new FormData();
+    Object.entries(payload || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (key === "logo_file") {
+        formData.append("logo", value);
+        return;
+      }
+      formData.append(key, String(value));
+    });
+    body = formData;
+  } else if (!isFormData) {
+    headers = { "Content-Type": "application/json" };
+    body = JSON.stringify(payload);
+  }
+
   const response = await fetch(`${API_BASE}/api/microempresas/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
-    body: JSON.stringify(payload),
+    body,
   });
   return response.json().then((data) => ({ response, data }));
 };

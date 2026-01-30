@@ -75,6 +75,12 @@ def reset_password(email: str, role: str, raw_token: str, new_password: str) -> 
         return False, "Token inválido o expirado", 400
 
     user.password = hash_password(new_password)
+    if hasattr(user, "force_password_reset"):
+        user.force_password_reset = False
+    if hasattr(user, "temp_password"):
+        user.temp_password = None
+    if hasattr(user, "temp_password_set_at"):
+        user.temp_password_set_at = None
     record.used_at = datetime.utcnow()
     db.session.commit()
     return True, "Contraseña actualizada correctamente", 200

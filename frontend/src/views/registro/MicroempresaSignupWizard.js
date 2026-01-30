@@ -132,6 +132,7 @@ export default function MicroempresaSignupWizard() {
   const [qrPreviewError, setQrPreviewError] = useState(false);
   const [qrReloadKey, setQrReloadKey] = useState(0);
   const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -155,6 +156,10 @@ export default function MicroempresaSignupWizard() {
 
       return next;
     });
+  };
+
+  const onLogoChange = (e) => {
+    setLogoFile(e.target.files?.[0] || null);
   };
 
   const validateSchedule = () => {
@@ -355,7 +360,7 @@ export default function MicroempresaSignupWizard() {
         ...payloadBase,
       };
 
-      const first = await startMicroempresaOnboarding(payload);
+      const first = await startMicroempresaOnboarding(payload, logoFile);
 
       if (!first.response.ok) {
         const err = (first.data?.error || "").toLowerCase();
@@ -366,7 +371,7 @@ export default function MicroempresaSignupWizard() {
           storage.del(KEY_PLAN_NAME);
           storage.del(KEY_PLAN_PRICE);
 
-          const retry = await startMicroempresaOnboarding(payloadBase);
+          const retry = await startMicroempresaOnboarding(payloadBase, logoFile);
           if (!retry.response.ok) {
             setMessage(retry.data.error || "No se pudo guardar los datos.");
             return;
@@ -511,9 +516,10 @@ export default function MicroempresaSignupWizard() {
                   </label>
 
                   <label>
-                    Logo URL (opcional)
-                    <input name="logo_url" type="url" value={form.logo_url} onChange={onChange} />
+                    Logo (opcional)
+                    <input type="file" accept="image/*" onChange={onLogoChange} />
                   </label>
+                  {logoFile && <p className="muted">Archivo seleccionado: {logoFile.name}</p>}
 
                   <label>
                     Celular de contacto

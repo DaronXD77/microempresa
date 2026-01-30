@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ToastModal from "./ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
 const ProfileView = ({ role, form, message, onChange, onSubmit, isSaving, forcePasswordReset }) => {
   const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
@@ -74,9 +75,20 @@ const ProfileView = ({ role, form, message, onChange, onSubmit, isSaving, forceP
           <input name="nombre" value={form.nombre} onChange={onChange} required />
         </label>
 
+        {form.logo_url && (
+          <div style={{ marginBottom: 12 }}>
+            <div className="muted" style={{ marginBottom: 6 }}>Logo actual</div>
+            <img
+              src={resolveAssetUrl(form.logo_url)}
+              alt="Logo"
+              style={{ maxWidth: 160, maxHeight: 160, objectFit: "contain" }}
+            />
+          </div>
+        )}
+
         <label>
-          Logo URL
-          <input name="logo_url" type="url" value={form.logo_url} onChange={onChange} />
+          Logo (opcional)
+          <input name="logo_file" type="file" accept="image/*" onChange={onChange} />
         </label>
 
         <label>

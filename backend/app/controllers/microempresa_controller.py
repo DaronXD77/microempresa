@@ -10,6 +10,7 @@ from ..services.auth_service import (
 )
 from ..views.microempresa_view import microempresa_detail, microempresa_item
 from ..services.venta_storage_service import build_upload_url, save_qr_image
+from ..services.microempresa_storage_service import save_microempresa_logo
 
 microempresa_bp = Blueprint("microempresa", __name__)
 
@@ -80,13 +81,14 @@ def create_microempresa():
     if not is_super_admin():
         return jsonify({"error": "No autorizado"}), 403
 
-    payload = request.get_json(silent=True) or {}
+    payload = request.form if request.form else (request.get_json(silent=True) or {})
 
     tipo_tienda = _normalize_tipo_tienda(payload.get("tipo_tienda"))
 
     nombre = (payload.get("nombre") or "").strip()
+    logo_file = request.files.get("logo") or request.files.get("logo_file") or request.files.get("file")
     logo_url = (payload.get("logo_url") or "").strip()
-    if logo_url.startswith("www."):
+    if not logo_file and logo_url.startswith("www."):
         logo_url = f"https://{logo_url}"
     direccion = (payload.get("direccion") or "").strip()
     horario = (payload.get("horario_atencion") or "").strip()
@@ -113,7 +115,9 @@ def create_microempresa():
         if not is_valid_schedule(horario):
             return jsonify({"error": "Horario inválido"}), 400
 
-    if logo_url and not is_valid_url(logo_url):
+    if logo_file:
+        logo_url = ""
+    elif logo_url and not is_valid_url(logo_url):
         return jsonify({"error": "Logo URL inválido"}), 400
 
     if not telefono_contacto:
@@ -141,6 +145,14 @@ def create_microempresa():
         estado="activo",
     )
     db.session.add(microempresa)
+    db.session.flush()
+
+    if logo_file:
+        try:
+            microempresa.logo_url = save_microempresa_logo(logo_file, microempresa.tenant_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
     db.session.commit()
     return jsonify({"microempresa": microempresa_detail(microempresa)}), 201
 
@@ -151,12 +163,13 @@ def update_microempresa(tenant_id):
         return jsonify({"error": "No autorizado"}), 403
 
     microempresa = Microempresa.query.get_or_404(tenant_id)
-    payload = request.get_json(silent=True) or {}
+    payload = request.form if request.form else (request.get_json(silent=True) or {})
 
     # ✅ nuevo: tipo_tienda (opcional)
     tipo_tienda = _normalize_tipo_tienda(payload.get("tipo_tienda"))
 
     nombre = payload.get("nombre")
+    logo_file = request.files.get("logo") or request.files.get("logo_file") or request.files.get("file")
     logo_url = payload.get("logo_url")
     direccion = payload.get("direccion")
     horario = payload.get("horario_atencion")
@@ -208,7 +221,12 @@ def update_microempresa(tenant_id):
     if nombre is not None:
         microempresa.nombre = nombre.strip()
 
-    if logo_url is not None:
+    if logo_file:
+        try:
+            microempresa.logo_url = save_microempresa_logo(logo_file, microempresa.tenant_id)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+    elif logo_url is not None:
         logo_url = (logo_url or "").strip()
         if logo_url.startswith("www."):
             logo_url = f"https://{logo_url}"

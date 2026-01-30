@@ -81,6 +81,7 @@ const emptyForm = {
   apellido_materno: "",
   ci: "",
   logo_url: "",
+  logo_file: null,
   direccion: "",
   horario_inicio: "",
   horario_fin: "",
@@ -339,6 +340,7 @@ const AppContent = () => {
         tipo_tienda: looksVirtual ? "virtual" : "fisica",
         nombre: user.nombre || "",
         logo_url: user.logo_url || "",
+        logo_file: null,
         direccion: looksVirtual ? "" : user.direccion || "",
         horario_inicio: looksVirtual ? "" : inicio || "",
         horario_fin: looksVirtual ? "" : fin || "",
@@ -391,7 +393,11 @@ const AppContent = () => {
   };
 
   const handleProfileChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, files, type } = event.target;
+    if (type === "file") {
+      setProfileForm((prev) => ({ ...prev, [name]: files?.[0] || null }));
+      return;
+    }
     setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -710,6 +716,8 @@ const AppContent = () => {
           telefono_contacto: profileForm.telefono_contacto,
           tipo_tienda: tipo,
         };
+
+        if (profileForm.logo_file) payload.logo_file = profileForm.logo_file;
 
         if (profileForm.password) payload.password = profileForm.password;
 
