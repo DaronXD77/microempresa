@@ -467,14 +467,6 @@ const LoginView = ({
 
               <p className="register-text">No tienes cuenta? Registrate:</p>
               <div className="register-links auth-link-list">
-                <button
-                  type="button"
-                  className="auth-pill"
-                  onClick={() => onOpenRegister("super_usuario")}
-                >
-                  Superusuarios
-                </button>
-
                 <Link className="auth-pill" to="/registro/microempresa?new=1">
                   Microempresa (por plan)
                 </Link>
