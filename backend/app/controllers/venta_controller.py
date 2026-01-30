@@ -97,13 +97,18 @@ def _format_fecha_local(dt):
     return dt.astimezone().strftime("%d/%m/%Y %H:%M")
 
 
+def _build_full_name(cliente) -> str:
+    if not cliente:
+        return ""
+    parts = [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
+    return " ".join([p for p in parts if p]).strip()
+
+
 def _serialize_venta(venta: Venta, tenant_map=None):
     data = venta.to_dict()
     cliente = venta.cliente
     if cliente:
-        data["cliente_nombre"] = " ".join(
-            [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
-        ).strip()
+        data["cliente_nombre"] = _build_full_name(cliente)
         data["cliente_email"] = cliente.email
         data["cliente_ci"] = cliente.ci
         data["cliente_razon_social"] = cliente.razon_social
@@ -290,9 +295,7 @@ def _create_venta(payload, tenant_id: int, tipo: str, metodo_pago: str, estado_e
     cliente_nombre = None
     cliente_email = None
     if cliente:
-        cliente_nombre = " ".join(
-            [cliente.nombre, cliente.apellido_paterno, cliente.apellido_materno]
-        ).strip()
+        cliente_nombre = _build_full_name(cliente)
         cliente_email = cliente.email
     else:
         raw_cliente = payload.get("cliente") or {}
@@ -642,11 +645,7 @@ def venta_factura_pdf(venta_id):
     c.drawString(40, y, f"Microempresa: {micro.nombre if micro else '-'}")
     y -= 14
     if cliente:
-        cliente_nombre = " ".join([
-            cliente.nombre,
-            cliente.apellido_paterno,
-            cliente.apellido_materno,
-        ]).strip()
+        cliente_nombre = _build_full_name(cliente)
         c.drawString(40, y, f"Cliente: {cliente_nombre or '-'}")
         y -= 14
         if cliente.ci:
