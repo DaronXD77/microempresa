@@ -31,6 +31,37 @@ from .controllers.compra_controller import compra_bp
 from .controllers.economia_controller import economia_bp
 from .controllers.empleado_controller import empleado_bp
 
+from .models import AdminSu, Plan
+from .services.auth_service import hash_password
+
+
+def seed_admin():
+    admin_email = "daron.augusto@gmail.com"
+    admin = AdminSu.query.filter_by(email=admin_email).first()
+    if not admin:
+        admin = AdminSu(
+            nombre="Admin",
+            apellido_paterno="Sistema",
+            apellido_materno="Base",
+            email=admin_email,
+            password=hash_password("admin"),
+            estado="activo",
+        )
+        db.session.add(admin)
+        db.session.commit()
+
+
+def seed_planes():
+    if Plan.query.count() == 0:
+        planes = [
+            {"nombre": "Basico", "precio": 50, "estado": "activo"},
+            {"nombre": "Pro", "precio": 100, "estado": "activo"},
+            {"nombre": "Premium", "precio": 200, "estado": "activo"},
+        ]
+        for p in planes:
+            db.session.add(Plan(**p))
+        db.session.commit()
+
 
 def create_app():
     load_dotenv(encoding="utf-8-sig")
@@ -220,6 +251,9 @@ def create_app():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+
+            seed_admin()
+            seed_planes()
 
     _run_startup_migrations()
 
