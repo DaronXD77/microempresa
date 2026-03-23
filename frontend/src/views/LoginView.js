@@ -478,6 +478,14 @@ const LoginView = ({
                 >
                   Clientes
                 </button>
+
+                <button
+                  type="button"
+                  className="auth-pill"
+                  onClick={() => onOpenRegister("super_usuario")}
+                >
+                  Crear Superadmin
+                </button>
               </div>
             </form>
           )}
