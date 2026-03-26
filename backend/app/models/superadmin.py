@@ -1,30 +1,28 @@
 """
-Modelo Cliente - Comprador en linea
+Modelo SuperAdmin - Administrador del sistema
 """
 from flask_login import UserMixin
 from .base import db
 
 
-class Cliente(UserMixin, db.Model):
-    """Cliente comprador"""
-    __tablename__ = "cliente"
+class SuperAdmin(UserMixin, db.Model):
+    """Administrador principal del sistema"""
+    __tablename__ = "superadmin"
 
-    id_cliente = db.Column(db.BigInteger, primary_key=True)
+    id_superadmin = db.Column(db.BigInteger, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(150), nullable=True, unique=True)
-    telefono = db.Column(db.String(20), nullable=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     estado = db.Column(db.String(20), nullable=False, default="activo")
     creado_en = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
 
     def get_id(self):
-        return f"cliente:{self.id_cliente}"
+        return f"superadmin:{self.id_superadmin}"
 
     def to_dict(self):
         return {
-            "id_cliente": self.id_cliente,
+            "id_superadmin": self.id_superadmin,
             "nombre": self.nombre,
             "email": self.email,
-            "telefono": self.telefono,
             "estado": self.estado,
         }

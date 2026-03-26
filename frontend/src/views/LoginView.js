@@ -1,494 +1,205 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { login, registerCliente } from "../controllers/authController";
 
-const roleLabels = {
-  super_usuario: "Super usuario",
-  microempresa: "Microempresa",
-  cliente: "Cliente",
-  empleado: "Empleado",
-};
+const LoginView = ({ onLogin, onRegister }) => {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-async function apiGet(path) {
-  const res = await fetch(path, { method: "GET", credentials: "include" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "Error");
-  return data;
-}
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-// Validación: mínimo 8 caracteres y al menos 1 mayúscula
-function validarPassword(pw) {
-  const value = String(pw || "");
-  if (value.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
-  if (!/[A-Z]/.test(value)) return "La contraseña debe incluir al menos una letra mayúscula.";
-  return "";
-}
-
-const LoginView = ({
-  form,
-  mode,
-  registerRole,
-  roleOptions,
-  message,
-  onChange,
-  onBulkChange,
-  onSubmit,
-  onSelectRole,
-  onBackFromRoleSelect,
-  onOpenRegister,
-  onBackToLogin,
-  onGuestLogin,
-}) => {
-  const isEmpresa = String(form.es_empresa) === "true";
-
-  const [microempresas, setMicroempresas] = useState([]);
-  const [loadingEmpresas, setLoadingEmpresas] = useState(false);
-  const [empresasError, setEmpresasError] = useState("");
-  const [empresaSearch, setEmpresaSearch] = useState("");
-  const [empresaOpen, setEmpresaOpen] = useState(false);
-
-  const shouldLoadEmpresas = false;
-
-  useEffect(() => {
-    let alive = true;
-
-    async function loadEmpresas() {
-      setLoadingEmpresas(true);
-      setEmpresasError("");
-      try {
-        const data = await apiGet("/api/public/microempresas");
-        const list = data.microempresas || [];
-        if (alive) setMicroempresas(list);
-      } catch (e) {
-        if (alive) {
-          setMicroempresas([]);
-          setEmpresasError(e.message);
-        }
-      } finally {
-        if (alive) setLoadingEmpresas(false);
-      }
-    }
-
-    if (shouldLoadEmpresas) loadEmpresas();
-    return () => {
-      alive = false;
-    };
-  }, [shouldLoadEmpresas]);
-
-  const empresaOptions = useMemo(() => {
-    const term = String(empresaSearch || "").trim().toLowerCase();
-    const filtered = term
-      ? (microempresas || []).filter((m) =>
-          String(m.nombre || "").toLowerCase().includes(term)
-        )
-      : microempresas || [];
-
-    return filtered.map((m) => ({
-      tenant_id: m.tenant_id,
-      nombre: m.nombre,
-    }));
-  }, [microempresas, empresaSearch]);
-
-  const selectedEmpresa = useMemo(() => {
-    if (!form.tenant_id) return null;
-    return (microempresas || []).find(
-      (m) => String(m.tenant_id) === String(form.tenant_id)
-    );
-  }, [microempresas, form.tenant_id]);
-
-  useEffect(() => {
-    if (!selectedEmpresa) return;
-    if (empresaOpen) return;
-    if (empresaSearch) return;
-    setEmpresaSearch(selectedEmpresa.nombre || "");
-  }, [selectedEmpresa, empresaOpen, empresaSearch]);
-
-  const handleEmpresaInput = (value) => {
-    setEmpresaSearch(value);
-    setEmpresaOpen(true);
-    if (!value.trim()) {
-      onChange({ target: { name: "tenant_id", value: "" } });
-    }
-  };
-
-  const matchEmpresa = (value) => {
-    const term = String(value || "").trim().toLowerCase();
-    if (!term) return null;
-    return (
-      (microempresas || []).find(
-        (m) => String(m.nombre || "").toLowerCase() === term
-      ) || null
-    );
-  };
-
-  const handleEmpresaKeyDown = (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    const exact = matchEmpresa(empresaSearch);
-    if (exact) {
-      selectEmpresa(exact);
-      return;
-    }
-    if (empresaOptions.length === 1) {
-      selectEmpresa(empresaOptions[0]);
-    }
-  };
-
-  const selectEmpresa = (empresa) => {
-    setEmpresaSearch(empresa?.nombre || "");
-    onChange({
-      target: { name: "tenant_id", value: String(empresa?.tenant_id || "") },
-    });
-    setEmpresaOpen(false);
-  };
-
-  const onClienteTipoChange = (e) => {
-    const { name, value } = e.target;
-    const razonSocial = value === "false" ? "" : form.razon_social || "";
-
-    if (onBulkChange) {
-      onBulkChange({ [name]: value, razon_social: razonSocial });
-      return;
-    }
-
-    onChange({ target: { name, value } });
-    onChange({ target: { name: "razon_social", value: razonSocial } });
-  };
-
-  // Wrapper para: exigir microempresa en registro cliente + normalizar email a minúsculas + validar password
-  const handleSubmitWithValidation = (e) => {
-    // Normalizar emails (registro y login) antes de enviar
-    // - registro: form.email
-    // - login: form.username
-    const normalizeEmailField = (fieldName) => {
-      const raw = String(form?.[fieldName] || "");
-      const next = raw.trim().toLowerCase();
-      if (raw !== next) {
-        onChange({ target: { name: fieldName, value: next } });
-      }
-    };
-
-    if (mode === "register") {
-      // Registro cliente: microempresa es opcional
-
-      // Email en minúsculas en registro
-      normalizeEmailField("email");
-
-      // Validar password en registro
-      const errPw = validarPassword(form.password);
-      if (errPw) {
-        e.preventDefault();
-        alert(errPw);
+    try {
+      const { response, data } = await login(email, password);
+      if (!response.ok) {
+        setError(data.error || "Error al iniciar sesion");
         return;
       }
+      onLogin(data.user, data.role);
+    } catch (err) {
+      setError("Error de conexion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!nombre.trim()) {
+      setError("Nombre es requerido");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Email es requerido");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password debe tener al menos 8 caracteres");
+      return;
     }
 
-    // Login: username (email) en minúsculas
-    if (mode !== "register") {
-      normalizeEmailField("username");
-    }
+    setLoading(true);
 
-    onSubmit(e);
+    try {
+      const { response, data } = await registerCliente({
+        nombre: nombre.trim(),
+        email: email.trim().toLowerCase(),
+        telefono: telefono.trim(),
+        password,
+      });
+
+      if (!response.ok) {
+        setError(data.error || "Error al registrarse");
+        return;
+      }
+
+      onLogin(data.user, data.role);
+    } catch (err) {
+      setError("Error de conexion");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-shell">
         <section className="auth-hero">
-          <span className="auth-badge">Microempresas</span>
-          <h1 className="auth-title">Acceso al sistema</h1>
+          <span className="auth-badge">Tienda Virtual</span>
+          <h1 className="auth-title">UMSA Somos Todos</h1>
           <p className="auth-subtitle">
-            Gestiona ventas, inventario, clientes y compras en un solo lugar.
+            Tu tienda universitaria de confianza. Compra productos de calidad.
           </p>
           <div className="auth-highlights">
             <div className="auth-highlight">
-              <strong>Control total</strong>
-              <span>Ventas, pedidos y reportes claros.</span>
+              <strong>Productos de Calidad</strong>
+              <span>Insumos verificados para la comunidad UMSA</span>
             </div>
             <div className="auth-highlight">
-              <strong>Inventario vivo</strong>
-              <span>Alertas, proveedores y costos en linea.</span>
+              <strong>Compras Seguras</strong>
+              <span>Pagos por QR de manera segura</span>
             </div>
             <div className="auth-highlight">
-              <strong>Clientes felices</strong>
-              <span>Seguimiento rapido y pedidos ordenados.</span>
+              <strong>Entregas Rapidas</strong>
+              <span>Recoge en campus o recibe en tu direccion</span>
             </div>
           </div>
         </section>
 
         <section className="auth-panel">
-          {roleOptions.length > 0 ? (
-            <div className="card auth-card role-picker">
-              <div className="auth-card-title">Selecciona el tipo de usuario</div>
-              <div className="role-options">
-                {roleOptions.map((option) => (
+          <div className="card auth-card">
+            {mode === "login" ? (
+              <>
+                <div className="auth-card-title">Iniciar Sesion</div>
+                <form onSubmit={handleLogin}>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Tu password"
+                      required
+                    />
+                  </div>
+                  {error && <p className="error">{error}</p>}
                   <button
-                    key={option}
-                    type="button"
-                    className="auth-role-button"
-                    onClick={() => onSelectRole(option)}
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={loading}
                   >
-                    {roleLabels[option] || option}
+                    {loading ? "Cargando..." : "Entrar"}
                   </button>
-                ))}
-              </div>
-              {message && <p className="error">{message}</p>}
-              <button
-                type="button"
-                className="auth-link"
-                onClick={onBackFromRoleSelect}
-              >
-                Volver
-              </button>
-            </div>
-          ) : mode === "register" ? (
-            <form className="card auth-card auth-form" onSubmit={handleSubmitWithValidation}>
-              <div className="auth-card-title">Registro {roleLabels[registerRole] || ""}</div>
-
-              {registerRole === "microempresa" && (
-                <div className="muted" style={{ marginBottom: 10 }}>
-                  El registro de microempresa ahora es por pasos (plan + QR + comprobante).
-                  <div style={{ marginTop: 10 }}>
-                    <Link className="auth-pill" to="/registro/microempresa?new=1">
-                      Ir al registro de microempresa
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {registerRole === "super_usuario" && (
-                <>
-                  <label>
-                    Nombre
-                    <input name="nombre" value={form.nombre} onChange={onChange} required />
-                  </label>
-                  <label>
-                    Apellido paterno
-                    <input
-                      name="apellido_paterno"
-                      value={form.apellido_paterno}
-                      onChange={onChange}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Apellido materno (opcional)
-                    <input
-                      name="apellido_materno"
-                      value={form.apellido_materno}
-                      onChange={onChange}
-                    />
-                  </label>
-                  <label>
-                    Email
-                    <input
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={(e) =>
-                        onChange({
-                          target: {
-                            name: "email",
-                            value: String(e.target.value || "").toLowerCase(),
-                          },
-                        })
-                      }
-                      required
-                    />
-                  </label>
-                  <label>
-                    Password
-                    <input
-                      name="password"
-                      type="password"
-                      value={form.password}
-                      onChange={onChange}
-                      required
-                    />
-                  </label>
-                  <button type="submit" className="auth-primary">
-                    Registrar
-                  </button>
-                </>
-              )}
-
-              {registerRole === "cliente" && (
-                <>
-                  <label>
-                    Nombre
-                    <input name="nombre" value={form.nombre} onChange={onChange} required />
-                  </label>
-
-                  <label>
-                    Apellido paterno
-                    <input
-                      name="apellido_paterno"
-                      value={form.apellido_paterno}
-                      onChange={onChange}
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Apellido materno (opcional)
-                    <input
-                      name="apellido_materno"
-                      value={form.apellido_materno}
-                      onChange={onChange}
-                    />
-                  </label>
-
-                  <label>
-                    CI
-                    <input name="ci" value={form.ci} onChange={onChange} required />
-                  </label>
-
-                  <div className="radio-group">
-                    <span>Tipo de cliente</span>
-                    <label className="radio-option">
-                      <input
-                        type="radio"
-                        name="es_empresa"
-                        value="false"
-                        checked={!isEmpresa}
-                        onChange={onClienteTipoChange}
-                      />
-                      Persona
-                    </label>
-                    <label className="radio-option">
-                      <input
-                        type="radio"
-                        name="es_empresa"
-                        value="true"
-                        checked={isEmpresa}
-                        onChange={onClienteTipoChange}
-                      />
-                      Empresa
-                    </label>
-                  </div>
-
-                  {isEmpresa && (
-                    <label>
-                      Razon social
-                      <input
-                        name="razon_social"
-                        value={form.razon_social}
-                        onChange={onChange}
-                        required
-                      />
-                    </label>
-                  )}
-
-                  <label>
-                    Email
-                    <input
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={(e) =>
-                        onChange({
-                          target: {
-                            name: "email",
-                            value: String(e.target.value || "").toLowerCase(),
-                          },
-                        })
-                      }
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Password
-                    <input
-                      name="password"
-                      type="password"
-                      value={form.password}
-                      onChange={onChange}
-                      required
-                    />
-                  </label>
-
-                  <button type="submit" className="auth-primary">
-                    Registrar
-                  </button>
-                </>
-              )}
-
-              {message && <p className="error">{message}</p>}
-
-              <button type="button" className="auth-link" onClick={onBackToLogin}>
-                Volver al login
-              </button>
-            </form>
-          ) : (
-            <form className="card auth-card auth-form" onSubmit={handleSubmitWithValidation}>
-              <div className="auth-card-title">Inicia sesion</div>
-              <label>
-                Email
-                <input
-                  name="username"
-                  value={form.username}
-                  onChange={(e) =>
-                    onChange({
-                      target: {
-                        name: "username",
-                        value: String(e.target.value || "").toLowerCase(),
-                      },
-                    })
-                  }
-                  required
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={onChange}
-                  required
-                />
-              </label>
-
-              <div style={{ marginTop: 8, marginBottom: 8 }}>
-                <Link className="auth-link" to="/forgot-password">
-                  Olvidaste tu contrasena?
-                </Link>
-              </div>
-
-              <button type="submit" className="auth-primary">
-                Entrar
-              </button>
-
-              <button type="button" className="auth-secondary" onClick={onGuestLogin}>
-                Ingresar como invitado
-              </button>
-
-              {message && <p className="error">{message}</p>}
-
-              <p className="register-text">No tienes cuenta? Registrate:</p>
-              <div className="register-links auth-link-list">
-                <Link className="auth-pill" to="/registro/microempresa?new=1">
-                  Microempresa (por plan)
-                </Link>
-
+                </form>
                 <button
                   type="button"
-                  className="auth-pill"
-                  onClick={() => onOpenRegister("cliente")}
+                  className="auth-link"
+                  onClick={() => setMode("register")}
                 >
-                  Clientes
+                  No tienes cuenta? Registrate
                 </button>
-
+              </>
+            ) : (
+              <>
+                <div className="auth-card-title">Registrarse</div>
+                <form onSubmit={handleRegister}>
+                  <div className="form-group">
+                    <label>Nombre completo</label>
+                    <input
+                      type="text"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      placeholder="Tu nombre"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Telefono (opcional)</label>
+                    <input
+                      type="tel"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      placeholder="77712345"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Minimo 8 caracteres"
+                      required
+                    />
+                  </div>
+                  {error && <p className="error">{error}</p>}
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Registrarse"}
+                  </button>
+                </form>
                 <button
                   type="button"
-                  className="auth-pill"
-                  onClick={() => onOpenRegister("super_usuario")}
+                  className="auth-link"
+                  onClick={() => setMode("login")}
                 >
-                  Crear Superadmin
+                  Ya tienes cuenta? Inicia sesion
                 </button>
-              </div>
-            </form>
-          )}
+              </>
+            )}
+          </div>
         </section>
       </div>
     </div>

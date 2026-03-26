@@ -1,57 +1,41 @@
+"""
+Modelo Producto - Productos de la tienda
+"""
+from datetime import datetime
 from .base import db
-from .producto_categoria import producto_categoria
 
 
 class Producto(db.Model):
+    """Producto de la tienda"""
     __tablename__ = "producto"
 
     id_producto = db.Column(db.BigInteger, primary_key=True)
-    tenant_id = db.Column(
-        db.BigInteger, db.ForeignKey("microempresa.tenant_id"), nullable=False, index=True
-    )
+    id_categoria = db.Column(db.BigInteger, db.ForeignKey("categoria.id_categoria"), nullable=False)
     nombre = db.Column(db.String(150), nullable=False)
-    descripcion = db.Column(db.Text)
-    precio_unitario = db.Column(db.Numeric(10, 2), nullable=False)
-    stock = db.Column(db.Integer, nullable=False, default=0)
-    stock_inicial = db.Column(db.Integer, nullable=True)
-    stock_minimo = db.Column(db.Integer, nullable=False, default=0)
-    proveedor_id = db.Column(
-        db.BigInteger, db.ForeignKey("proveedor.id_proveedor"), nullable=True, index=True
-    )
-    precio_compra = db.Column(db.Numeric(10, 2), nullable=True)
-    estado = db.Column(db.String(20), nullable=False, default="activo")
+    descripcion = db.Column(db.Text, nullable=True)
+    precio_compra = db.Column(db.Numeric(10, 2), nullable=False)
+    precio_venta = db.Column(db.Numeric(10, 2), nullable=False)
+    es_textil = db.Column(db.Boolean, nullable=False, default=False)
+    estado = db.Column(db.Boolean, nullable=False, default=True)
+    creado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    categorias = db.relationship(
-        "Categoria",
-        secondary=producto_categoria,
-        back_populates="productos",
-        lazy="selectin",
-        overlaps="productos,categorias",
-    )
+    categoria = db.relationship("Categoria", backref="productos")
+    tallas = db.relationship("ProductoTalla", backref="producto", cascade="all, delete-orphan")
+    imagenes = db.relationship("ProductoImagen", backref="producto", cascade="all, delete-orphan")
 
-    fotos = db.relationship(
-        "FotoProducto",
-        back_populates="producto",
-        cascade="all, delete-orphan",
-        order_by="FotoProducto.orden.asc()",
-        lazy="selectin",
-    )
-
-    def to_dict(self, include_relations: bool = True):
+    def to_dict(self, include_relations=True):
         data = {
             "id_producto": self.id_producto,
-            "tenant_id": self.tenant_id,
+            "id_categoria": self.id_categoria,
             "nombre": self.nombre,
             "descripcion": self.descripcion,
-            "precio_unitario": float(self.precio_unitario or 0),
-            "stock": self.stock,
-            "stock_inicial": self.stock_inicial if self.stock_inicial is not None else self.stock,
-            "stock_minimo": self.stock_minimo,
-            "proveedor_id": self.proveedor_id,
-            "precio_compra": float(self.precio_compra or 0) if self.precio_compra is not None else None,
+            "precio_compra": float(self.precio_compra or 0),
+            "precio_venta": float(self.precio_venta or 0),
+            "es_textil": self.es_textil,
             "estado": self.estado,
         }
         if include_relations:
-            data["categorias"] = [c.to_dict() for c in self.categorias]  # type: ignore[misc]
-            data["fotos"] = [f.to_dict() for f in self.fotos]  # type: ignore[misc]
+            data["categoria"] = self.categoria.to_dict() if self.categoria else None
+            data["tallas"] = [t.to_dict() for t in self.tallas]
+            data["imagenes"] = [i.to_dict() for i in self.imagenes]
         return data
