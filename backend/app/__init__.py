@@ -154,6 +154,9 @@ def create_app():
                     db.session.execute(
                         text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS ci TEXT")
                     )
+                    # Persiste primero las columnas criticas de cliente para que no se
+                    # pierdan si una migracion posterior falla en una base antigua.
+                    db.session.commit()
                     db.session.execute(text("ALTER TABLE cliente ALTER COLUMN tenant_id DROP NOT NULL"))
                     db.session.execute(
                         text("ALTER TABLE proveedor ADD COLUMN IF NOT EXISTS tenant_id BIGINT")
