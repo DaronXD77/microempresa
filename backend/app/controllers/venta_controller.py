@@ -4,7 +4,7 @@ Controlador de ventas
 from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
-from ...models.base import db
+from ..models.base import db
 from ...models import Venta, DetalleVenta, Pago, Envio, ProductoTalla, Vendedor
 from ...services import (
     serialize_user, registrar_auditoria, verificar_stock_suficiente,
