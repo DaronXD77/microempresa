@@ -191,6 +191,9 @@ def create_app():
                     db.session.execute(
                         text("ALTER TABLE proveedor ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'activo'")
                     )
+                    # Persiste tambien proveedor para que sus columnas no se pierdan si
+                    # una migracion posterior falla en una base antigua.
+                    db.session.commit()
                     db.session.execute(
                         text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL")
                     )
