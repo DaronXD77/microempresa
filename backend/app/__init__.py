@@ -195,6 +195,19 @@ def create_app():
                     # una migracion posterior falla en una base antigua.
                     db.session.commit()
                     db.session.execute(
+                        text("ALTER TABLE producto ADD COLUMN IF NOT EXISTS tenant_id BIGINT")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE categoria ADD COLUMN IF NOT EXISTS id_su BIGINT")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE categoria ADD COLUMN IF NOT EXISTS creado_en TIMESTAMP")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS id_producto BIGINT")
+                    )
+                    db.session.commit()
+                    db.session.execute(
                         text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL")
                     )
                     db.session.execute(
@@ -287,14 +300,26 @@ def create_app():
                         db.session.execute(text("ALTER TABLE proveedor ADD COLUMN estado TEXT DEFAULT 'activo'"))
                     db.session.execute(text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL"))
                     db.session.execute(text("UPDATE cliente SET es_generico = 0 WHERE es_generico IS NULL"))
+                    info_categoria = db.session.execute(text("PRAGMA table_info(categoria)")).fetchall()
+                    columns_categoria = {row[1] for row in info_categoria}
+                    if "id_su" not in columns_categoria:
+                        db.session.execute(text("ALTER TABLE categoria ADD COLUMN id_su INTEGER"))
+                    if "creado_en" not in columns_categoria:
+                        db.session.execute(text("ALTER TABLE categoria ADD COLUMN creado_en DATETIME"))
                     info_producto = db.session.execute(text("PRAGMA table_info(producto)")).fetchall()
                     columns_producto = {row[1] for row in info_producto}
+                    if "tenant_id" not in columns_producto:
+                        db.session.execute(text("ALTER TABLE producto ADD COLUMN tenant_id INTEGER"))
                     if "stock_inicial" not in columns_producto:
                         db.session.execute(text("ALTER TABLE producto ADD COLUMN stock_inicial INTEGER"))
                     if "proveedor_id" not in columns_producto:
                         db.session.execute(text("ALTER TABLE producto ADD COLUMN proveedor_id INTEGER"))
                     if "precio_compra" not in columns_producto:
                         db.session.execute(text("ALTER TABLE producto ADD COLUMN precio_compra REAL"))
+                    info_detalle_venta = db.session.execute(text("PRAGMA table_info(detalle_venta)")).fetchall()
+                    columns_detalle_venta = {row[1] for row in info_detalle_venta}
+                    if "id_producto" not in columns_detalle_venta:
+                        db.session.execute(text("ALTER TABLE detalle_venta ADD COLUMN id_producto INTEGER"))
                     info_entrega = db.session.execute(text("PRAGMA table_info(entrega)")).fetchall()
                     columns_entrega = {row[1] for row in info_entrega}
                     if "seleccion_opcion_id" not in columns_entrega:
