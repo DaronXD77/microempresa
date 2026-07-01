@@ -3,7 +3,7 @@ Controlador de categorias y productos
 """
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
-from ...models.base import db
+from ..models.base import db
 from ...models import Categoria, Talla, Producto, ProductoTalla, ProductoImagen
 from ...services import serialize_user, registrar_auditoria
 
