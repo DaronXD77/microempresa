@@ -154,6 +154,18 @@ def create_app():
                     db.session.execute(
                         text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS ci TEXT")
                     )
+                    db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS password TEXT")
+                    )
+                    db.session.execute(
+                        text(
+                            "DO $$ BEGIN "
+                            "IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cliente' AND column_name = 'password_hash') THEN "
+                            "UPDATE cliente SET password = password_hash WHERE password IS NULL; "
+                            "END IF; "
+                            "END $$;"
+                        )
+                    )
                     # Persiste primero las columnas criticas de cliente para que no se
                     # pierdan si una migracion posterior falla en una base antigua.
                     db.session.commit()
@@ -244,6 +256,12 @@ def create_app():
                         db.session.execute(
                             text("ALTER TABLE cliente ADD COLUMN ci TEXT")
                         )
+                    if "password" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN password TEXT")
+                        )
+                    if "password_hash" in columns_cliente:
+                        db.session.execute(text("UPDATE cliente SET password = password_hash WHERE password IS NULL"))
                     info_proveedor = db.session.execute(text("PRAGMA table_info(proveedor)")).fetchall()
                     columns_proveedor = {row[1] for row in info_proveedor}
                     if "tenant_id" not in columns_proveedor:
