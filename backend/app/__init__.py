@@ -132,6 +132,18 @@ def create_app():
                 if dialect == "postgresql":
                     db.session.execute(text("ALTER TABLE microempresa ADD COLUMN IF NOT EXISTS qr_url TEXT"))
                     db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS apellido_paterno TEXT DEFAULT '-' ")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS apellido_materno TEXT")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS razon_social TEXT")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS es_generico BOOLEAN DEFAULT FALSE")
+                    )
+                    db.session.execute(
                         text(
                             "ALTER TABLE cliente ADD COLUMN IF NOT EXISTS force_password_reset BOOLEAN DEFAULT FALSE"
                         )
@@ -165,6 +177,12 @@ def create_app():
                         text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS temp_password_set_at TIMESTAMP")
                     )
                     db.session.execute(
+                        text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL")
+                    )
+                    db.session.execute(
+                        text("UPDATE cliente SET es_generico = FALSE WHERE es_generico IS NULL")
+                    )
+                    db.session.execute(
                         text(
                             "ALTER TABLE producto ADD COLUMN IF NOT EXISTS stock_inicial INTEGER"
                         )
@@ -195,6 +213,22 @@ def create_app():
                         db.session.execute(text("ALTER TABLE microempresa ADD COLUMN qr_url TEXT"))
                     info_cliente = db.session.execute(text("PRAGMA table_info(cliente)")).fetchall()
                     columns_cliente = {row[1] for row in info_cliente}
+                    if "apellido_paterno" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN apellido_paterno TEXT DEFAULT '-' ")
+                        )
+                    if "apellido_materno" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN apellido_materno TEXT")
+                        )
+                    if "razon_social" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN razon_social TEXT")
+                        )
+                    if "es_generico" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN es_generico BOOLEAN DEFAULT 0")
+                        )
                     if "force_password_reset" not in columns_cliente:
                         db.session.execute(
                             text("ALTER TABLE cliente ADD COLUMN force_password_reset BOOLEAN DEFAULT 0")
@@ -227,6 +261,8 @@ def create_app():
                         db.session.execute(
                             text("ALTER TABLE cliente ADD COLUMN temp_password_set_at DATETIME")
                         )
+                    db.session.execute(text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL"))
+                    db.session.execute(text("UPDATE cliente SET es_generico = 0 WHERE es_generico IS NULL"))
                     info_producto = db.session.execute(text("PRAGMA table_info(producto)")).fetchall()
                     columns_producto = {row[1] for row in info_producto}
                     if "stock_inicial" not in columns_producto:
