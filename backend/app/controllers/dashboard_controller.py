@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 from sqlalchemy import func
-from ...models.base import db
+from ..models.base import db
 from ...models import Venta, Compra, ProductoTalla, Auditoria
 from ...services import serialize_user, productos_con_stock_bajo
 
