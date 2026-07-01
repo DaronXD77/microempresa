@@ -6,8 +6,8 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 from sqlalchemy import func
 from ..models.base import db
-from ...models import Venta, Compra, ProductoTalla, Auditoria
-from ...services import serialize_user, productos_con_stock_bajo
+from ..models import Venta, Compra, ProductoTalla, Auditoria
+from ..services import serialize_user, productos_con_stock_bajo
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -148,7 +148,7 @@ def list_auditoria():
     if not require_superadmin():
         return jsonify({"error": "No autorizado"}), 401
     
-    from ...services import get_auditoria
+    from ..services import get_auditoria
     
     page = request.args.get("page", 1, type=int)
     tipo_usuario = request.args.get("tipo_usuario")

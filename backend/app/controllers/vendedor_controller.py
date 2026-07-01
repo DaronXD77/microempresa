@@ -4,8 +4,8 @@ Controlador de vendedores (solo superadmin)
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 from ..models.base import db
-from ...models import Vendedor
-from ...services import (
+from ..models import Vendedor
+from ..services import (
     serialize_user, hash_password, validate_email,
     validate_ci, validate_phone, registrar_auditoria
 )

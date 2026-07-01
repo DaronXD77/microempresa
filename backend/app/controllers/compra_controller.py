@@ -5,8 +5,8 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 from ..models.base import db
-from ...models import Compra, DetalleCompra, Proveedor, ProductoTalla
-from ...services import serialize_user, registrar_auditoria, actualizar_stock
+from ..models import Compra, DetalleCompra, Proveedor, ProductoTalla
+from ..services import serialize_user, registrar_auditoria, actualizar_stock
 
 compra_bp = Blueprint("compra", __name__)
 
