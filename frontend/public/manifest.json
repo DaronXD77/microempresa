@@ -1,15 +1,9 @@
 {
-  "short_name": "Tienda UMSA",
-  "name": "Tienda Virtual UMSA Somos Todos",
-  "icons": [
-    {
-      "src": "icono.jpeg",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/jpeg"
-    }
-  ],
+  "short_name": "Login",
+  "name": "Login App",
+  "icons": [],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#1976d2",
+  "theme_color": "#2d6cdf",
   "background_color": "#ffffff"
 }

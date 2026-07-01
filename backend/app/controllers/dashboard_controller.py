@@ -1,177 +1,150 @@
-"""
-Controlador de dashboard y reportes
-"""
-from datetime import datetime, timedelta
-from flask import Blueprint, jsonify, request
+# dashboard_controller.py
+from flask import Blueprint, jsonify, session
 from flask_login import current_user
-from sqlalchemy import func
-from ..models.base import db
-from ..models import Venta, Compra, ProductoTalla, Auditoria
-from ..services import serialize_user, productos_con_stock_bajo
+
+from ..models import AdminSu, Cliente, ClienteMicroempresa, Microempresa, Producto, db
+from ..services.auth_service import guest_payload, serialize_user
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
-def require_auth():
-    """Verifica que haya usuario autenticado"""
-    return current_user.is_authenticated
-
-
-def require_superadmin():
-    """Verifica que sea superadmin"""
-    if not current_user.is_authenticated:
-        return False
-    user_data, role = serialize_user(current_user)
-    return role == "superadmin"
+def resolve_identity():
+    if current_user.is_authenticated:
+        return serialize_user(current_user)
+    if session.get("guest"):
+        return guest_payload(), "cliente"
+    return None, None
 
 
 @dashboard_bp.get("/api/dashboard")
-def get_dashboard():
-    """Obtiene datos del dashboard"""
-    if not require_auth():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    user_data, role = serialize_user(current_user)
-    
-    hoy = datetime.now().date()
-    inicio_mes = hoy.replace(day=1)
-    
-    ventas_dia = db.session.query(func.sum(Venta.total)).filter(
-        Venta.fecha == hoy,
-        Venta.estado == "completado"
-    ).scalar() or 0
-    
-    ventas_mes = db.session.query(func.sum(Venta.total)).filter(
-        Venta.fecha >= inicio_mes,
-        Venta.fecha <= hoy,
-        Venta.estado == "completado"
-    ).scalar() or 0
-    
-    ventas_count_dia = Venta.query.filter(
-        Venta.fecha == hoy,
-        Venta.estado == "completado"
-    ).count()
-    
-    ventas_count_mes = Venta.query.filter(
-        Venta.fecha >= inicio_mes,
-        Venta.fecha <= hoy,
-        Venta.estado == "completado"
-    ).count()
-    
-    if role == "superadmin":
-        compras_mes = db.session.query(func.sum(Compra.total)).filter(
-            Compra.fecha >= inicio_mes,
-            Compra.fecha <= hoy,
-            Compra.estado == "completado"
-        ).scalar() or 0
-        
-        alertas_stock = productos_con_stock_bajo()
-        
-        return jsonify({
-            "ventas_dia": float(ventas_dia),
-            "ventas_mes": float(ventas_mes),
-            "compras_mes": float(compras_mes),
-            "ventas_count_dia": ventas_count_dia,
-            "ventas_count_mes": ventas_count_mes,
-            "alertas_stock": alertas_stock,
-        }), 200
-    
-    return jsonify({
-        "ventas_dia": float(ventas_dia),
-        "ventas_mes": float(ventas_mes),
-        "ventas_count_dia": ventas_count_dia,
-        "ventas_count_mes": ventas_count_mes,
-    }), 200
+def dashboard():
+    user_data, user_role = resolve_identity()
 
+    if user_role == "super_usuario":
+        microempresas = Microempresa.query.order_by(Microempresa.nombre).all()
+        clientes = Cliente.query.order_by(Cliente.nombre).all()
+        admins = AdminSu.query.order_by(AdminSu.apellido_paterno, AdminSu.nombre).all()
 
-@dashboard_bp.get("/api/reportes/ventas")
-def reporte_ventas():
-    """Reporte de ventas por rango de fechas"""
-    if not require_auth():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    fecha_inicio = request.args.get("fecha_inicio")
-    fecha_fin = request.args.get("fecha_fin")
-    
-    if not fecha_inicio or not fecha_fin:
-        return jsonify({"error": "fecha_inicio y fecha_fin son requeridos"}), 400
-    
-    try:
-        inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
-        fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
-    except ValueError:
-        return jsonify({"error": "Formato de fecha invalido (YYYY-MM-DD)"}), 400
-    
-    query = Venta.query.filter(
-        Venta.fecha >= inicio,
-        Venta.fecha <= fin,
-        Venta.estado == "completado"
-    )
-    
-    user_data, role = serialize_user(current_user)
-    if role == "vendedor":
-        query = query.filter_by(id_vendedor=user_data.get("id_vendedor"))
-    
-    ventas = query.order_by(Venta.fecha.desc()).all()
-    
-    total_ventas = sum(float(v.total) for v in ventas)
-    cantidad_ventas = len(ventas)
-    
-    por_dia = db.session.query(
-        Venta.fecha,
-        func.sum(Venta.total).label("total"),
-        func.count(Venta.id_venta).label("cantidad")
-    ).filter(
-        Venta.fecha >= inicio,
-        Venta.fecha <= fin,
-        Venta.estado == "completado"
-    ).group_by(Venta.fecha).order_by(Venta.fecha).all()
-    
-    return jsonify({
-        "ventas": [v.to_dict(include_relations=False) for v in ventas],
-        "resumen": {
-            "total_ventas": total_ventas,
-            "cantidad_ventas": cantidad_ventas,
-            "fecha_inicio": str(inicio),
-            "fecha_fin": str(fin),
-        },
-        "por_dia": [
-            {"fecha": str(d.fecha), "total": float(d.total), "cantidad": d.cantidad}
-            for d in por_dia
-        ]
-    }), 200
+        relaciones = (
+            db.session.query(ClienteMicroempresa, Microempresa)
+            .join(Microempresa, Microempresa.tenant_id == ClienteMicroempresa.tenant_id)
+            .all()
+        )
+        clientes_map = {}
+        for rel, micro in relaciones:
+            clientes_map.setdefault(rel.id_cliente, []).append(
+                {
+                    "tenant_id": micro.tenant_id,
+                    "nombre": micro.nombre,
+                }
+            )
 
+        return jsonify(
+            {
+                "role": user_role,
+                "counts": {
+                    "microempresas": len(microempresas),
+                    "clientes": len(clientes),
+                },
+                "admins": [
+                    {
+                        "id_su": admin.id_su,
+                        "nombre": admin.nombre,
+                        "apellido_paterno": admin.apellido_paterno,
+                        "apellido_materno": admin.apellido_materno,
+                        "email": admin.email,
+                        "estado": admin.estado,
+                    }
+                    for admin in admins
+                ],
+                "microempresas": [
+                    {
+                        "tenant_id": m.tenant_id,
+                        "nombre": m.nombre,
+                        "email": m.email,
+                        "estado": m.estado,
+                        "tipo_tienda": getattr(m, "tipo_tienda", None),
+                        "direccion": m.direccion,
+                        "horario_atencion": m.horario_atencion,
+                    }
+                    for m in microempresas
+                ],
+                "clientes": [
+                    {
+                        "id": c.id_cliente,
+                        "tenant_id": (clientes_map.get(c.id_cliente) or [{}])[0].get("tenant_id"),
+                        "microempresa_nombre": (clientes_map.get(c.id_cliente) or [{}])[0].get("nombre"),
+                        "microempresas": clientes_map.get(c.id_cliente, []),
+                        "nombre": c.nombre,
+                        "apellido_paterno": c.apellido_paterno,
+                        "apellido_materno": c.apellido_materno,
+                        "ci": c.ci,
+                        "razon_social": c.razon_social,
+                        "es_generico": c.es_generico,
+                        "email": c.email,
+                        "estado": c.estado,
+                        "creation_source": c.creation_source,
+                    }
+                    for c in clientes
+                ],
+            }
+        )
 
-@dashboard_bp.get("/api/auditoria")
-def list_auditoria():
-    """Lista registros de auditoria (solo superadmin)"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    from ..services import get_auditoria
-    
-    page = request.args.get("page", 1, type=int)
-    tipo_usuario = request.args.get("tipo_usuario")
-    accion = request.args.get("accion")
-    fecha_inicio = request.args.get("fecha_inicio")
-    fecha_fin = request.args.get("fecha_fin")
-    
-    filtros = {}
-    if tipo_usuario:
-        filtros["tipo_usuario"] = tipo_usuario
-    if accion:
-        filtros["accion"] = accion
-    if fecha_inicio:
-        try:
-            filtros["fecha_inicio"] = datetime.strptime(fecha_inicio, "%Y-%m-%d")
-        except ValueError:
-            pass
-    if fecha_fin:
-        try:
-            filtros["fecha_fin"] = datetime.strptime(fecha_fin, "%Y-%m-%d") + timedelta(days=1)
-        except ValueError:
-            pass
-    
-    result = get_auditoria(filtros=filtros, page=page)
-    
-    return jsonify(result), 200
+    if user_role == "microempresa":
+        tenant_id = user_data.get("tenant_id") if isinstance(user_data, dict) else None
+        if tenant_id is None:
+            return jsonify({"error": "Tenant inválido"}), 400
+
+        productos_count = Producto.query.filter_by(tenant_id=tenant_id).count()
+        clientes_count = (
+            ClienteMicroempresa.query
+            .filter_by(tenant_id=tenant_id)
+            .count()
+        )
+        stock_alerts = (
+            Producto.query
+            .filter(Producto.tenant_id == tenant_id)
+            .filter(Producto.estado == "activo")
+            .filter(Producto.stock <= Producto.stock_minimo)
+            .all()
+        )
+
+        return jsonify(
+            {
+                "role": user_role,
+                "microempresa": user_data,
+                "counts": {
+                    "productos": productos_count,
+                    "clientes": clientes_count,
+                },
+                "stock_alerts": [
+                    {
+                        "id_producto": p.id_producto,
+                        "nombre": p.nombre,
+                        "stock": p.stock,
+                        "stock_minimo": p.stock_minimo,
+                    }
+                    for p in stock_alerts
+                ],
+            }
+        )
+
+    if user_role == "cliente":
+        microempresas = Microempresa.query.order_by(Microempresa.nombre).all()
+        return jsonify(
+            {
+                "role": user_role,
+                "microempresas": [
+                    {
+                        "tenant_id": m.tenant_id,
+                        "nombre": m.nombre,
+                        "email": m.email,
+                        "tipo_tienda": getattr(m, "tipo_tienda", None),
+                        "estado": m.estado,
+                    }
+                    for m in microempresas
+                ],
+            }
+        )
+
+    return jsonify({"role": None}), 401

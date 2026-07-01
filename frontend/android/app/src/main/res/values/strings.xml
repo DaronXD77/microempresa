@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Microempresa</string>
+    <string name="title_activity_main">Microempresa</string>
+    <string name="package_name">com.microempresa.app</string>
+    <string name="custom_url_scheme">com.microempresa.app</string>
+</resources>

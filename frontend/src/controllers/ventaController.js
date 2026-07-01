@@ -1,88 +1,131 @@
 const API_BASE = process.env.REACT_APP_API_BASE || "";
 
-const safeJson = async (response) => {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
-};
-
-export const fetchDashboard = async () => {
-  const response = await fetch(`${API_BASE}/api/dashboard`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const createVenta = async (payload) => {
+export const fetchVentas = async () => {
   const response = await fetch(`${API_BASE}/api/ventas`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const fetchPedidos = async () => {
+  const response = await fetch(`${API_BASE}/api/ventas/pedidos`, {
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const crearVentaPos = async (payload) => {
+  const response = await fetch(`${API_BASE}/api/ventas/pos`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await safeJson(response);
+  const data = await response.json().catch(() => ({}));
   return { response, data };
 };
 
-export const fetchVentas = async (params = {}) => {
-  const queryParams = new URLSearchParams(params).toString();
-  const url = queryParams
-    ? `${API_BASE}/api/ventas?${queryParams}`
-    : `${API_BASE}/api/ventas`;
-  const response = await fetch(url, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchVenta = async (ventaId) => {
-  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchQrVenta = async (ventaId) => {
-  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/qr`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const createEnvio = async (ventaId, payload) => {
-  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/envio`, {
+export const crearVentaVirtual = async (payload) => {
+  const response = await fetch(`${API_BASE}/api/ventas/virtual`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await safeJson(response);
+  const data = await response.json().catch(() => ({}));
   return { response, data };
 };
 
-export const reporteVentas = async (fechaInicio, fechaFin) => {
-  const response = await fetch(
-    `${API_BASE}/api/reportes/ventas?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`,
-    { credentials: "include" }
-  );
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchAuditoria = async (params = {}) => {
-  const queryParams = new URLSearchParams(params).toString();
-  const url = queryParams
-    ? `${API_BASE}/api/auditoria?${queryParams}`
-    : `${API_BASE}/api/auditoria`;
-  const response = await fetch(url, {
+export const subirComprobante = async (ventaId, formData, token) => {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/comprobante${query}`, {
+    method: "POST",
+    body: formData,
     credentials: "include",
   });
-  const data = await safeJson(response);
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const marcarEmpaquetado = async (ventaId, payload = {}) => {
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/empaquetar`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const marcarEntregado = async (ventaId, token) => {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/entregar${query}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const seleccionarEntrega = async (ventaId, opcionId, token) => {
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/entrega/seleccionar${query}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ opcion_id: opcionId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const rechazarVenta = async (ventaId) => {
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/rechazar`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const cancelarVenta = async (ventaId) => {
+  const response = await fetch(`${API_BASE}/api/ventas/${ventaId}/cancelar`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const fetchMisPedidos = async (email) => {
+  const query = email ? `?email=${encodeURIComponent(email)}` : "";
+  const response = await fetch(`${API_BASE}/api/ventas/mis-pedidos${query}`, {
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const fetchAdminVentas = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.date) params.set("date", filters.date);
+  if (filters.tenant_id) params.set("tenant_id", filters.tenant_id);
+  const query = params.toString() ? `?${params.toString()}` : "";
+
+  const response = await fetch(`${API_BASE}/api/admin/ventas${query}`, {
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+};
+
+export const fetchAdminVenta = async (ventaId) => {
+  const response = await fetch(`${API_BASE}/api/admin/ventas/${ventaId}`, {
+    credentials: "include",
+  });
+  const data = await response.json().catch(() => ({}));
   return { response, data };
 };

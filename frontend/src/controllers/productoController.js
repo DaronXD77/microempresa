@@ -1,84 +1,10 @@
 const API_BASE = process.env.REACT_APP_API_BASE || "";
 
-const safeJson = async (response) => {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
-};
-
-export const fetchCategorias = async () => {
-  const response = await fetch(`${API_BASE}/api/public/categorias`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchProductos = async (stock = "all") => {
-  const url = stock === "disponible"
-    ? `${API_BASE}/api/public/productos?stock=disponible`
-    : `${API_BASE}/api/public/productos`;
-  const response = await fetch(url, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchProducto = async (productoId) => {
-  const response = await fetch(`${API_BASE}/api/public/productos/${productoId}`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchCategoriasAdmin = async () => {
-  const response = await fetch(`${API_BASE}/api/categorias`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const createCategoria = async (payload) => {
-  const response = await fetch(`${API_BASE}/api/categorias`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchTallas = async () => {
-  const response = await fetch(`${API_BASE}/api/tallas`, {
-    credentials: "include",
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const createTalla = async (payload) => {
-  const response = await fetch(`${API_BASE}/api/tallas`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-  const data = await safeJson(response);
-  return { response, data };
-};
-
-export const fetchProductosAdmin = async () => {
+export const fetchProductos = async () => {
   const response = await fetch(`${API_BASE}/api/productos`, {
     credentials: "include",
   });
-  const data = await safeJson(response);
-  return { response, data };
+  return response.json().then((data) => ({ response, data }));
 };
 
 export const createProducto = async (payload) => {
@@ -88,39 +14,71 @@ export const createProducto = async (payload) => {
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  const data = await safeJson(response);
-  return { response, data };
+  return response.json().then((data) => ({ response, data }));
 };
 
-export const updateProducto = async (productoId, payload) => {
-  const response = await fetch(`${API_BASE}/api/productos/${productoId}`, {
+export const updateProducto = async (id, payload) => {
+  const response = await fetch(`${API_BASE}/api/productos/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  const data = await safeJson(response);
-  return { response, data };
+  return response.json().then((data) => ({ response, data }));
 };
 
-export const addTallaProducto = async (productoId, payload) => {
-  const response = await fetch(`${API_BASE}/api/productos/${productoId}/tallas`, {
+export const activateProducto = async (id) => {
+  const response = await fetch(`${API_BASE}/api/productos/${id}/activate`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  return response.json().then((data) => ({ response, data }));
+};
+
+export const deactivateProducto = async (id) => {
+  const response = await fetch(`${API_BASE}/api/productos/${id}/deactivate`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  return response.json().then((data) => ({ response, data }));
+};
+
+export const uploadProductoFoto = async (id, formData) => {
+  const response = await fetch(`${API_BASE}/api/productos/${id}/fotos`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(payload),
+    body: formData,
   });
-  const data = await safeJson(response);
-  return { response, data };
+  return response.json().then((data) => ({ response, data }));
 };
 
-export const updateTallaProducto = async (productoId, ptId, payload) => {
-  const response = await fetch(`${API_BASE}/api/productos/${productoId}/tallas/${ptId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
+export const deleteProductoFoto = async (productId, fotoId) => {
+  const response = await fetch(`${API_BASE}/api/productos/${productId}/fotos/${fotoId}`, {
+    method: "DELETE",
     credentials: "include",
-    body: JSON.stringify(payload),
   });
-  const data = await safeJson(response);
-  return { response, data };
+  return response.json().then((data) => ({ response, data }));
+};
+
+export const fetchStockAlerts = async () => {
+  const response = await fetch(`${API_BASE}/api/productos/alerts/stock`, {
+    credentials: "include",
+  });
+  return response.json().then((data) => ({ response, data }));
+};
+
+export const fetchPublicProductos = async (params = {}) => {
+  const filtered = Object.entries(params).reduce((acc, [key, value]) => {
+    if (value === undefined || value === null || value === "") return acc;
+    acc[key] = value;
+    return acc;
+  }, {});
+  const query = new URLSearchParams(filtered);
+  const response = await fetch(`${API_BASE}/api/public/productos?${query.toString()}`);
+  return response.json().then((data) => ({ response, data }));
+};
+
+export const fetchPublicProductoDetalle = async (productoId) => {
+  const response = await fetch(`${API_BASE}/api/public/productos/${productoId}`);
+  return response.json().then((data) => ({ response, data }));
 };

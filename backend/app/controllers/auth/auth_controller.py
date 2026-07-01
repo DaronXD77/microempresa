@@ -1,293 +1,364 @@
-"""
-Controlador de autenticacion
-"""
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
 from flask_login import current_user, login_user, logout_user
-from ...models.base import db
-from ...models import SuperAdmin, Vendedor, Cliente, Auditoria
-from ...services import (
+
+from ...models import AdminSu, Cliente, Microempresa, Empleado, AuditLog, db
+from ...services.auth_service import (
+    get_roles_for_email,
     get_user_for_role,
+    get_users_by_identifier,
     hash_password,
-    verify_password,
-    get_users_by_email,
+    is_active_user,
+    is_valid_schedule,
+    is_valid_url,
+    check_microempresa_subscription,
     serialize_user,
-    is_active,
-    validate_email,
-    validate_ci,
-    validate_phone,
-    registrar_auditoria,
 )
+
+VIRTUAL_DIRECCION = "Sin tienda física (virtual)"
+VIRTUAL_HORARIO = "Atención online"
+from ...views.auth import auth_response, guest_response
+
 
 auth_bp = Blueprint("auth", __name__)
 
-ROLE_ALIASES = {
-    "super_usuario": "superadmin",
-    "superadmin": "superadmin",
-    "empleado": "vendedor",
-    "vendedor": "vendedor",
-    "cliente": "cliente",
-}
 
-
-def _normalize_role(role):
-    return ROLE_ALIASES.get((role or "").strip().lower())
-
-
-def _auth_response(user_data, role, status=200, available_roles=None):
-    return jsonify(
-        {
-            "user": user_data,
-            "role": role,
-            "available_roles": available_roles or ([role] if role else []),
-        }
-    ), status
-
-
-def _guest_response():
-    return _auth_response({"nombre": "Invitado"}, "cliente")
-
-
-def _clear_guest_session():
+def clear_guest_session():
     session.pop("guest", None)
 
 
 def _audit_login(user, role):
-    """Registra login en auditoria"""
-    registrar_auditoria(
-        accion="login_exitoso",
-        id_usuario=getattr(user, f"id_{role}" if role != "superadmin" else "id_superadmin"),
-        tipo_usuario=role,
-        detalles={"email": getattr(user, "email", "")}
+    _audit_logout()
+    name = ""
+    email = getattr(user, "email", None)
+    if role == "microempresa":
+        name = getattr(user, "nombre", "") or "Microempresa"
+    elif role == "empleado":
+        parts = [getattr(user, "nombre", ""), getattr(user, "apellido_paterno", ""), getattr(user, "apellido_materno", "")]
+        name = " ".join([p for p in parts if p]).strip()
+    else:
+        parts = [getattr(user, "nombre", ""), getattr(user, "apellido_paterno", ""), getattr(user, "apellido_materno", "")]
+        name = " ".join([p for p in parts if p]).strip()
+    audit = AuditLog(
+        user_id=getattr(user, "id_su", None)
+        if role == "super_usuario"
+        else getattr(user, "id_cliente", None)
+        if role == "cliente"
+        else getattr(user, "id_empleado", None)
+        if role == "empleado"
+        else getattr(user, "tenant_id", None),
+        role=role,
+        nombre=name or None,
+        email=email,
+        ip=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"),
     )
+    db.session.add(audit)
+    db.session.commit()
+    session["audit_id"] = audit.id_audit
 
 
 def _audit_logout():
-    """Registra logout en auditoria"""
-    if current_user.is_authenticated:
-        user_dict, role = serialize_user(current_user)
-        if role and user_dict:
-            registrar_auditoria(
-                accion="logout",
-                id_usuario=user_dict.get(f"id_{role}" if role != "superadmin" else "id_superadmin"),
-                tipo_usuario=role,
-            )
+    audit_id = session.pop("audit_id", None)
+    if not audit_id:
+        return
+    audit = AuditLog.query.filter_by(id_audit=audit_id).first()
+    if audit and not audit.logout_at:
+        audit.logout_at = datetime.utcnow()
+        db.session.commit()
 
 
-def _login_and_respond(user, role, status=200):
-    _clear_guest_session()
-    login_user(user)
-    _audit_login(user, role)
-    user_data, user_role = serialize_user(user)
-    return _auth_response(user_data, user_role, status)
-
-
-@auth_bp.post("/api/login")
-def login():
-    """Inicio de sesion"""
-    payload = request.get_json(silent=True) or {}
-    email = (payload.get("email") or payload.get("username") or "").strip().lower()
-    password = payload.get("password") or ""
-    requested_role = _normalize_role(payload.get("role"))
-    
-    if not email or not password:
-        return jsonify({"error": "Email y password son requeridos"}), 400
-    
-    if not validate_email(email):
-        return jsonify({"error": "Email invalido"}), 400
-    
-    users = get_users_by_email(email)
-    valid_roles = []
-    for role, user in users.items():
-        if not user or not verify_password(user.password_hash, password):
-            continue
-        if not is_active(user):
-            return jsonify({"error": "Usuario inactivo"}), 401
-        valid_roles.append(role)
-
-    if requested_role:
-        user = users.get(requested_role)
-        if not user or requested_role not in valid_roles:
-            return jsonify({"error": "Credenciales invalidas"}), 401
-        return _login_and_respond(user, requested_role)
-
-    if len(valid_roles) > 1:
-        return jsonify({"select_role": True, "roles": valid_roles}), 200
-
-    if len(valid_roles) == 1:
-        role = valid_roles[0]
-        return _login_and_respond(users[role], role)
-    
-    registrar_auditoria(
-        accion="login_fallido",
-        detalles={"email": email}
+def _subscription_required_response(microempresa, solicitud):
+    return (
+        jsonify({
+            "error": "Suscripción vencida o pendiente. Selecciona un plan para continuar.",
+            "subscription_required": True,
+            "tenant_id": getattr(microempresa, "tenant_id", None),
+            "signup_id": getattr(solicitud, "id_solicitud", None),
+        }),
+        402,
     )
-    
-    return jsonify({"error": "Credenciales invalidas"}), 401
-
-
-@auth_bp.post("/api/logout")
-def logout():
-    """Cierre de sesion"""
-    _audit_logout()
-    logout_user()
-    _clear_guest_session()
-    return jsonify({"message": "Logout exitoso"}), 200
-
-
-@auth_bp.get("/api/me")
-def me():
-    """Obtiene usuario actual"""
-    if current_user.is_authenticated:
-        user_data, user_role = serialize_user(current_user)
-        return _auth_response(user_data, user_role)
-    if session.get("guest"):
-        return _guest_response()
-    return _auth_response(None, None, available_roles=[])
-
-
-@auth_bp.post("/api/guest-login")
-def guest_login():
-    """Sesion temporal como invitado"""
-    _audit_logout()
-    logout_user()
-    session["guest"] = True
-    return _guest_response()
-
-
-@auth_bp.post("/api/switch-role")
-def switch_role():
-    """Cambia al rol seleccionado para el mismo email"""
-    if not current_user.is_authenticated:
-        return jsonify({"error": "Rol invalido"}), 401
-
-    payload = request.get_json(silent=True) or {}
-    requested_role = _normalize_role(payload.get("role"))
-    if not requested_role:
-        return jsonify({"error": "Rol requerido"}), 400
-
-    email = getattr(current_user, "email", None)
-    if not email:
-        return jsonify({"error": "Rol invalido"}), 400
-
-    user = get_user_for_role(requested_role, email)
-    current_password_hash = getattr(current_user, "password_hash", None)
-    if (
-        not user
-        or not is_active(user)
-        or not current_password_hash
-        or getattr(user, "password_hash", None) != current_password_hash
-    ):
-        return jsonify({"error": "Rol invalido"}), 400
-
-    return _login_and_respond(user, requested_role)
 
 
 @auth_bp.post("/api/register")
 def register():
-    """Registro compatible con el frontend publicado"""
     payload = request.get_json(silent=True) or {}
-    role = _normalize_role(payload.get("role"))
+    role = payload.get("role", "microempresa")
+    clear_guest_session()
+
+    if role == "microempresa":
+        nombre = (payload.get("nombre") or "").strip()
+        logo_url = (payload.get("logo_url") or "").strip()
+        if logo_url.startswith("www."):
+            logo_url = f"https://{logo_url}"
+        direccion = (payload.get("direccion") or "").strip()
+        horario = (payload.get("horario_atencion") or "").strip()
+        telefono_contacto = (payload.get("telefono_contacto") or "").strip()
+        nombre_prop = (payload.get("nombre_propietario") or "").strip()
+        apellido_paterno_prop = (payload.get("apellido_paterno_propietario") or "").strip()
+        apellido_materno_prop = (payload.get("apellido_materno_propietario") or "").strip()
+        email = (payload.get("email") or "").strip()
+        password = payload.get("password") or ""
+
+        if not all(
+            [
+                nombre,
+                nombre_prop,
+                apellido_paterno_prop,
+                email,
+                password,
+            ]
+        ):
+            return jsonify({"error": "Todos los campos son requeridos"}), 400
+
+        if direccion or horario:
+            if not direccion or not horario:
+                return jsonify({"error": "Dirección y horario son requeridos para tienda física"}), 400
+            if not is_valid_schedule(horario):
+                return jsonify({"error": "Horario inválido"}), 400
+            if not telefono_contacto:
+                return jsonify({"error": "Celular de contacto requerido"}), 400
+        else:
+            direccion = VIRTUAL_DIRECCION
+            horario = VIRTUAL_HORARIO
+
+        if telefono_contacto:
+            if not telefono_contacto.isdigit() or len(telefono_contacto) != 8:
+                return jsonify({"error": "Celular debe tener 8 dígitos"}), 400
+        if logo_url and not is_valid_url(logo_url):
+            return jsonify({"error": "Logo URL inválido"}), 400
+        if not is_valid_schedule(horario):
+            return jsonify({"error": "Horario inválido"}), 400
+
+        if Microempresa.query.filter_by(nombre=nombre).first():
+            return jsonify({"error": "Microempresa ya existe"}), 409
+        if Microempresa.query.filter_by(email=email).first():
+            return jsonify({"error": "Email ya registrado"}), 409
+
+        microempresa = Microempresa(
+            nombre=nombre,
+            logo_url=logo_url or None,
+            direccion=direccion,
+            horario_atencion=horario,
+            nombre_propietario=nombre_prop,
+            apellido_paterno_propietario=apellido_paterno_prop,
+            apellido_materno_propietario=apellido_materno_prop or None,
+            telefono_contacto=telefono_contacto or None,
+            email=email,
+            password=hash_password(password),
+            estado="activo",
+        )
+        db.session.add(microempresa)
+        db.session.commit()
+        login_user(microempresa)
+        _audit_login(microempresa, "microempresa")
+        available_roles = get_roles_for_email(microempresa.email, microempresa.password)
+        return auth_response(microempresa.to_dict(), "microempresa", available_roles, 201)
+
+    if role == "super_usuario":
+        nombre = (payload.get("nombre") or "").strip()
+        apellido_paterno = (payload.get("apellido_paterno") or "").strip()
+        apellido_materno = (payload.get("apellido_materno") or "").strip()
+        email = (payload.get("email") or "").strip()
+        password = payload.get("password") or ""
+
+        if not all([nombre, apellido_paterno, email, password]):
+            return (
+                jsonify({"error": "Nombre y apellido paterno son requeridos"}),
+                400,
+            )
+
+        if AdminSu.query.filter_by(email=email).first():
+            return jsonify({"error": "Email ya registrado"}), 409
+
+        admin_user = AdminSu(
+            nombre=nombre,
+            apellido_paterno=apellido_paterno,
+            apellido_materno=apellido_materno or None,
+            email=email,
+            password=hash_password(password),
+            estado="activo",
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        login_user(admin_user)
+        _audit_login(admin_user, "super_usuario")
+        available_roles = get_roles_for_email(admin_user.email, admin_user.password)
+        return auth_response(admin_user.to_dict(), "super_usuario", available_roles, 201)
 
     if role == "cliente":
-        return register_cliente()
+        nombre = (payload.get("nombre") or "").strip()
+        apellido_paterno = (payload.get("apellido_paterno") or "").strip()
+        apellido_materno = (payload.get("apellido_materno") or "").strip()
+        ci = (payload.get("ci") or "").strip()
+        razon_social = (payload.get("razon_social") or "").strip()
+        email = (payload.get("email") or "").strip()
+        password = payload.get("password") or ""
+        es_empresa = payload.get("es_empresa")
+        es_generico = payload.get("es_generico", False)
 
-    if role != "superadmin":
-        return jsonify({"error": "Rol de registro no soportado"}), 400
+        if not all([nombre, apellido_paterno, ci, email, password]):
+            return jsonify({"error": "Todos los campos son requeridos"}), 400
+        if not isinstance(es_empresa, bool):
+            return jsonify({"error": "es_empresa debe ser boolean"}), 400
+        if es_empresa and not razon_social:
+            return jsonify({"error": "Razón social requerida"}), 400
+        if es_generico is not None and not isinstance(es_generico, bool):
+            return jsonify({"error": "es_generico debe ser boolean"}), 400
 
-    nombre = (payload.get("nombre") or "").strip()
-    apellido_paterno = (payload.get("apellido_paterno") or "").strip()
-    apellido_materno = (payload.get("apellido_materno") or "").strip()
-    email = (payload.get("email") or "").strip().lower()
-    password = payload.get("password") or ""
+        if Cliente.query.filter_by(email=email).first():
+            return jsonify({"error": "Email ya registrado"}), 409
+        if Cliente.query.filter_by(ci=ci).first():
+            return jsonify({"error": "CI ya registrado"}), 409
 
-    if not all([nombre, apellido_paterno, email, password]):
-        return jsonify({"error": "Todos los campos son requeridos"}), 400
+        cliente = Cliente(
+            nombre=nombre,
+            apellido_paterno=apellido_paterno,
+            apellido_materno=apellido_materno or None,
+            ci=ci,
+            razon_social=razon_social or None,
+            es_generico=bool(es_generico),
+            email=email,
+            password=hash_password(password),
+            estado="activo",
+        )
+        db.session.add(cliente)
+        db.session.commit()
+        login_user(cliente)
+        _audit_login(cliente, "cliente")
+        available_roles = get_roles_for_email(cliente.email, cliente.password)
+        return auth_response(cliente.to_dict(), "cliente", available_roles, 201)
 
-    if not validate_email(email):
-        return jsonify({"error": "Email invalido"}), 400
-
-    if len(password) < 8:
-        return jsonify({"error": "Password debe tener al menos 8 caracteres"}), 400
-
-    existing_users = get_users_by_email(email)
-    if any(existing_users.values()):
-        return jsonify({"error": "Email ya registrado"}), 409
-
-    full_name = " ".join(part for part in [nombre, apellido_paterno, apellido_materno] if part)
-    admin = SuperAdmin(
-        nombre=full_name,
-        email=email,
-        password_hash=hash_password(password),
-        estado="activo",
-    )
-    db.session.add(admin)
-    db.session.commit()
-
-    registrar_auditoria(
-        accion="registrar_superadmin",
-        id_usuario=admin.id_superadmin,
-        tipo_usuario="superadmin",
-        entidad_afectada="superadmin",
-        id_entidad=admin.id_superadmin,
-        detalles={"email": email},
-    )
-
-    return _login_and_respond(admin, "superadmin", 201)
+    return jsonify({"error": "Rol inválido"}), 400
 
 
-@auth_bp.post("/api/register/cliente")
-def register_cliente():
-    """Registro de cliente"""
+@auth_bp.post("/api/login")
+def login():
     payload = request.get_json(silent=True) or {}
-    
-    nombre = (payload.get("nombre") or "").strip()
-    apellido_paterno = (payload.get("apellido_paterno") or "").strip()
-    apellido_materno = (payload.get("apellido_materno") or "").strip()
-    email = (payload.get("email") or "").strip().lower()
-    telefono = (payload.get("telefono") or "").strip()
+    identifier = (payload.get("username") or payload.get("email") or "").strip()
     password = payload.get("password") or ""
-    
-    if not all([nombre, email, password]):
-        return jsonify({"error": "Nombre, email y password son requeridos"}), 400
-    
-    if not validate_email(email):
-        return jsonify({"error": "Email invalido"}), 400
-    
-    if len(password) < 8:
-        return jsonify({"error": "Password debe tener al menos 8 caracteres"}), 400
-    
-    if telefono and not validate_phone(telefono):
-        return jsonify({"error": "Telefono invalido"}), 400
-    
-    existing_users = get_users_by_email(email)
-    if any(existing_users.values()):
-        return jsonify({"error": "Email ya registrado"}), 409
+    role = payload.get("role")
 
-    full_name = " ".join(part for part in [nombre, apellido_paterno, apellido_materno] if part)
-    
-    cliente = Cliente(
-        nombre=full_name or nombre,
-        email=email,
-        telefono=telefono or None,
-        password_hash=hash_password(password),
-        estado="activo",
-    )
-    db.session.add(cliente)
-    db.session.commit()
-    
-    _clear_guest_session()
-    login_user(cliente)
-    _audit_login(cliente, "cliente")
-    
-    registrar_auditoria(
-        accion="registrar_cliente",
-        id_usuario=cliente.id_cliente,
-        tipo_usuario="cliente",
-        entidad_afectada="cliente",
-        id_entidad=cliente.id_cliente,
-        detalles={"email": email}
-    )
-    
-    user_data, user_role = serialize_user(cliente)
-    return _auth_response(user_data, user_role, 201)
+    if not identifier or not password:
+        return jsonify({"error": "Usuario y password son requeridos"}), 400
+
+    password_hash = hash_password(password)
+    clear_guest_session()
+
+    if role:
+        user = get_user_for_role(role, identifier)
+        if (
+            not user
+            or not user.password
+            or user.password != password_hash
+            or not is_active_user(user)
+        ):
+            return jsonify({"error": "Credenciales inválidas"}), 401
+
+        if role == "microempresa":
+            ok, solicitud = check_microempresa_subscription(user)
+            if not ok:
+                return _subscription_required_response(user, solicitud)
+
+        login_user(user)
+        _audit_login(user, role)
+        user_data, user_role = serialize_user(user)
+        available_roles = get_roles_for_email(user.email, user.password)
+        return auth_response(user_data, user_role, available_roles)
+
+    users_by_role = get_users_by_identifier(identifier)
+    available_roles = [
+        role_key
+        for role_key, user in users_by_role.items()
+        if user and user.password and user.password == password_hash and is_active_user(user)
+    ]
+
+    if not available_roles:
+        return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if available_roles == ["microempresa"]:
+        user = users_by_role.get("microempresa")
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
+
+    if len(available_roles) > 1:
+        return jsonify({"select_role": True, "roles": available_roles}), 200
+
+    role_key = available_roles[0]
+    user = users_by_role[role_key]
+    if not user or not is_active_user(user):
+        return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if role_key == "microempresa":
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
+    login_user(user)
+    _audit_login(user, role_key)
+    user_data, user_role = serialize_user(user)
+    available_roles = get_roles_for_email(user.email, user.password)
+    return auth_response(user_data, user_role, available_roles)
+
+
+@auth_bp.post("/api/guest-login")
+def guest_login():
+    logout_user()
+    _audit_logout()
+    session["guest"] = True
+    return guest_response()
+
+
+@auth_bp.post("/api/logout")
+def logout():
+    _audit_logout()
+    logout_user()
+    clear_guest_session()
+    return jsonify({"message": "Logout OK"}), 200
+
+
+@auth_bp.get("/api/me")
+def me():
+    if current_user.is_authenticated:
+        user_data, user_role = serialize_user(current_user)
+        available_roles = get_roles_for_email(current_user.email, current_user.password)
+        return auth_response(user_data, user_role, available_roles)
+
+    if session.get("guest"):
+        return guest_response()
+
+    return jsonify({"user": None, "role": None, "available_roles": []}), 200
+
+
+@auth_bp.post("/api/switch-role")
+def switch_role():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Rol inválido"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    role = payload.get("role")
+    if not role:
+        return jsonify({"error": "Rol requerido"}), 400
+
+    available_roles = get_roles_for_email(current_user.email, current_user.password)
+    if role not in available_roles:
+        return jsonify({"error": "Rol inválido"}), 400
+
+    user = get_user_for_role(role, current_user.email)
+    if (
+        not user
+        or not user.password
+        or user.password != current_user.password
+        or not is_active_user(user)
+    ):
+        return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if role == "microempresa":
+        ok, solicitud = check_microempresa_subscription(user)
+        if not ok:
+            return _subscription_required_response(user, solicitud)
+
+    login_user(user)
+    _audit_login(user, role)
+    user_data, user_role = serialize_user(user)
+    return auth_response(user_data, user_role, available_roles)

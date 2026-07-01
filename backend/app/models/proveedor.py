@@ -1,30 +1,25 @@
-"""
-Modelo Proveedor - Proveedores de productos
-"""
-from datetime import datetime
 from .base import db
 
 
 class Proveedor(db.Model):
-    """Proveedor de la tienda"""
     __tablename__ = "proveedor"
 
     id_proveedor = db.Column(db.BigInteger, primary_key=True)
+    tenant_id = db.Column(
+        db.BigInteger, db.ForeignKey("microempresa.tenant_id", ondelete="CASCADE"), nullable=False, index=True
+    )
     nombre = db.Column(db.String(150), nullable=False)
-    nit = db.Column(db.String(20), nullable=True, unique=True)
-    telefono = db.Column(db.String(20), nullable=True)
-    email = db.Column(db.String(150), nullable=True)
-    direccion = db.Column(db.Text, nullable=True)
-    estado = db.Column(db.Boolean, nullable=False, default=True)
-    creado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    direccion = db.Column(db.String(200))
+    email = db.Column(db.String(150))
+    password = db.Column(db.Text)
+    estado = db.Column(db.String(20), nullable=False, default="activo")
 
     def to_dict(self):
         return {
             "id_proveedor": self.id_proveedor,
+            "tenant_id": self.tenant_id,
             "nombre": self.nombre,
-            "nit": self.nit,
-            "telefono": self.telefono,
-            "email": self.email,
             "direccion": self.direccion,
+            "email": self.email,
             "estado": self.estado,
         }

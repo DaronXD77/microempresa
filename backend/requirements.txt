@@ -4,7 +4,6 @@ Flask-Login==0.6.3
 Flask-Cors==4.0.0
 psycopg2-binary==2.9.9
 python-dotenv==1.0.1
-argon2-cffi==21.3.0
-qrcode==7.4.2
-Pillow==10.1.0
-gunicorn
+reportlab==4.1.0
+gunicorn==22.0.0
+cloudinary==1.41.0

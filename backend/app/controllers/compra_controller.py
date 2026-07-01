@@ -1,215 +1,216 @@
-"""
-Controlador de compras (solo superadmin)
-"""
-from datetime import datetime
-from flask import Blueprint, jsonify, request
+from io import BytesIO
+
+from datetime import timezone
+
+from flask import Blueprint, jsonify, request, send_file
 from flask_login import current_user
-from ..models.base import db
-from ..models import Compra, DetalleCompra, Proveedor, ProductoTalla
-from ..services import serialize_user, registrar_auditoria, actualizar_stock
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+from ..models import Compra, DetalleCompra, Producto, Proveedor, db
+from ..services.auth_service import get_current_role, has_permission
 
 compra_bp = Blueprint("compra", __name__)
 
 
-def require_superadmin():
-    """Verifica que sea superadmin"""
+def _format_fecha_local(dt):
+    if not dt:
+        return "-"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+
+
+def _require_perm(perm):
     if not current_user.is_authenticated:
-        return False
-    user_data, role = serialize_user(current_user)
-    return role == "superadmin"
+        return jsonify({"error": "No autenticado"}), 401
+    role = get_current_role(current_user)
+    if role == "microempresa":
+        return None
+    if role == "empleado" and has_permission(current_user, perm):
+        return None
+    return jsonify({"error": "No autorizado"}), 403
+    return None
 
 
-@compra_bp.get("/api/proveedores")
-def list_proveedores():
-    """Lista proveedores"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    proveedores = Proveedor.query.all()
-    return jsonify({"proveedores": [p.to_dict() for p in proveedores]}), 200
+def _tenant_id():
+    if not current_user.is_authenticated:
+        return None
+    if get_current_role(current_user) not in {"microempresa", "empleado"}:
+        return None
+    return getattr(current_user, "tenant_id", None)
 
 
-@compra_bp.post("/api/proveedores")
-def create_proveedor():
-    """Crea proveedor"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    payload = request.get_json(silent=True) or {}
-    
-    nombre = (payload.get("nombre") or "").strip()
-    nit = (payload.get("nit") or "").strip()
-    telefono = (payload.get("telefono") or "").strip()
-    email = (payload.get("email") or "").strip().lower()
-    direccion = (payload.get("direccion") or "").strip()
-    
-    if not nombre:
-        return jsonify({"error": "Nombre requerido"}), 400
-    
-    if nit and Proveedor.query.filter_by(nit=nit).first():
-        return jsonify({"error": "NIT ya registrado"}), 409
-    
-    proveedor = Proveedor(
-        nombre=nombre,
-        nit=nit or None,
-        telefono=telefono or None,
-        email=email or None,
-        direccion=direccion or None,
-    )
-    db.session.add(proveedor)
-    db.session.commit()
-    
-    user_data, role = serialize_user(current_user)
-    registrar_auditoria(
-        accion="crear_proveedor",
-        id_usuario=user_data.get("id_superadmin"),
-        tipo_usuario="superadmin",
-        entidad_afectada="proveedor",
-        id_entidad=proveedor.id_proveedor,
-        detalles={"nombre": nombre}
-    )
-    
-    return jsonify({"proveedor": proveedor.to_dict()}), 201
+def _parse_int(value, default=None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
-@compra_bp.put("/api/proveedores/<int:proveedor_id>")
-def update_proveedor(proveedor_id):
-    """Actualiza proveedor"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    proveedor = db.session.get(Proveedor, proveedor_id)
-    if not proveedor:
-        return jsonify({"error": "Proveedor no encontrado"}), 404
-    
-    payload = request.get_json(silent=True) or {}
-    
-    if "nombre" in payload:
-        proveedor.nombre = payload["nombre"].strip()
-    if "nit" in payload:
-        proveedor.nit = payload["nit"].strip() or None
-    if "telefono" in payload:
-        proveedor.telefono = payload["telefono"].strip() or None
-    if "email" in payload:
-        proveedor.email = payload["email"].strip().lower() or None
-    if "direccion" in payload:
-        proveedor.direccion = payload["direccion"].strip() or None
-    if "estado" in payload:
-        proveedor.estado = bool(payload["estado"])
-    
-    db.session.commit()
-    
-    return jsonify({"proveedor": proveedor.to_dict()}), 200
+def _parse_float(value, default=None):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 @compra_bp.get("/api/compras")
 def list_compras():
-    """Lista compras"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 20, type=int)
-    
-    query = Compra.query.order_by(Compra.fecha.desc(), Compra.id_compra.desc())
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    return jsonify({
-        "compras": [c.to_dict(include_relations=False) for c in pagination.items],
-        "total": pagination.total,
-        "pages": pagination.pages,
-        "current_page": page,
-    }), 200
+    error = _require_perm("historial_compras")
+    if error:
+        error = _require_perm("compras")
+        if error:
+            return error
+
+    tenant_id = _tenant_id()
+    compras = (
+        Compra.query
+        .filter_by(tenant_id=tenant_id)
+        .order_by(Compra.id_compra.desc())
+        .all()
+    )
+
+    return jsonify({"compras": [c.to_dict() for c in compras]})
+
+
+@compra_bp.get("/api/compras/<int:compra_id>")
+def compra_detalle(compra_id):
+    error = _require_perm("historial_compras")
+    if error:
+        error = _require_perm("compras")
+        if error:
+            return error
+
+    tenant_id = _tenant_id()
+    compra = Compra.query.filter_by(id_compra=compra_id, tenant_id=tenant_id).first()
+    if not compra:
+        return jsonify({"error": "Compra no encontrada"}), 404
+
+    return jsonify({"compra": compra.to_dict()})
 
 
 @compra_bp.post("/api/compras")
 def create_compra():
-    """Crea una compra"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
+    error = _require_perm("compras")
+    if error:
+        return error
+
     payload = request.get_json(silent=True) or {}
-    
-    id_proveedor = payload.get("id_proveedor")
-    numero_factura = (payload.get("numero_factura") or "").strip()
-    observaciones = (payload.get("observaciones") or "").strip()
-    detalles = payload.get("detalles", [])
-    
-    if not id_proveedor:
+    proveedor_id = _parse_int(payload.get("proveedor_id"))
+    items = payload.get("items") or []
+
+    if not proveedor_id:
         return jsonify({"error": "Proveedor requerido"}), 400
-    
-    if not detalles:
-        return jsonify({"error": "Debe incluir productos"}), 400
-    
-    proveedor = db.session.get(Proveedor, id_proveedor)
-    if not proveedor or not proveedor.estado:
+
+    tenant_id = _tenant_id()
+    proveedor = Proveedor.query.filter_by(id_proveedor=proveedor_id, tenant_id=tenant_id).first()
+    if not proveedor:
         return jsonify({"error": "Proveedor invalido"}), 400
-    
-    user_data, role = serialize_user(current_user)
-    id_superadmin = user_data.get("id_superadmin")
-    
-    total = 0
-    detalle_compra_list = []
-    
-    for item in detalles:
-        id_producto_talla = item.get("id_producto_talla")
-        cantidad = item.get("cantidad", 1)
-        precio_unitario = item.get("precio_unitario", 0)
-        
-        item_subtotal = float(precio_unitario) * cantidad
-        total += item_subtotal
-        
-        detalle_compra_list.append({
-            "id_producto_talla": id_producto_talla,
-            "cantidad": cantidad,
-            "precio_unitario": precio_unitario,
-            "subtotal": item_subtotal,
-        })
-    
-    compra = Compra(
-        id_proveedor=id_proveedor,
-        id_superadmin=id_superadmin,
-        numero_factura=numero_factura or None,
-        total=total,
-        observaciones=observaciones or None,
-    )
+
+    if not items:
+        return jsonify({"error": "Debes agregar productos"}), 400
+
+    compra = Compra(tenant_id=tenant_id, proveedor_id=proveedor_id, estado="registrada")
+
+    total = 0.0
+    detalles = []
+
+    for item in items:
+        producto_id = _parse_int(item.get("id_producto"))
+        cantidad = _parse_int(item.get("cantidad"), 0) or 0
+        precio_unitario = _parse_float(item.get("precio_unitario"))
+        lote = (item.get("lote") or "").strip() or None
+
+        if not producto_id:
+            return jsonify({"error": "Producto invalido"}), 400
+        if cantidad <= 0:
+            return jsonify({"error": "Cantidad invalida"}), 400
+        if precio_unitario is None:
+            return jsonify({"error": "Precio invalido"}), 400
+
+        producto = Producto.query.filter_by(id_producto=producto_id, tenant_id=tenant_id).first()
+        if not producto:
+            return jsonify({"error": "Producto no encontrado"}), 404
+
+        subtotal = float(cantidad * precio_unitario)
+        total += subtotal
+
+        detalle = DetalleCompra(
+            id_producto=producto_id,
+            cantidad=cantidad,
+            precio_unitario=precio_unitario,
+            subtotal=subtotal,
+            lote=lote,
+        )
+        detalles.append(detalle)
+
+        # Actualizar producto
+        producto.stock = (producto.stock or 0) + cantidad
+        producto.precio_compra = precio_unitario
+        producto.proveedor_id = proveedor_id
+
+    compra.total = total
+    compra.detalles = detalles
+
     db.session.add(compra)
     db.session.commit()
-    
-    for item in detalle_compra_list:
-        det = DetalleCompra(
-            id_compra=compra.id_compra,
-            id_producto_talla=item["id_producto_talla"],
-            cantidad=item["cantidad"],
-            precio_unitario=item["precio_unitario"],
-            subtotal=item["subtotal"],
-        )
-        db.session.add(det)
-        
-        actualizar_stock(item["id_producto_talla"], item["cantidad"], "sumar")
-    
-    db.session.commit()
-    
-    registrar_auditoria(
-        accion="registrar_compra",
-        id_usuario=id_superadmin,
-        tipo_usuario="superadmin",
-        entidad_afectada="compra",
-        id_entidad=compra.id_compra,
-        detalles={"total": float(compra.total), "proveedor": proveedor.nombre}
-    )
-    
+
     return jsonify({"compra": compra.to_dict()}), 201
 
+@compra_bp.get("/api/compras/<int:compra_id>/pdf")
+def compra_pdf(compra_id):
+    error = _require_perm("historial_compras")
+    if error:
+        error = _require_perm("compras")
+        if error:
+            return error
 
-@compra_bp.get("/api/compras/<int:compra_id>")
-def get_compra(compra_id):
-    """Obtiene compra"""
-    if not require_superadmin():
-        return jsonify({"error": "No autorizado"}), 401
-    
-    compra = db.session.get(Compra, compra_id)
+    tenant_id = _tenant_id()
+    compra = Compra.query.filter_by(id_compra=compra_id, tenant_id=tenant_id).first()
     if not compra:
         return jsonify({"error": "Compra no encontrada"}), 404
-    
-    return jsonify({"compra": compra.to_dict()}), 200
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 40
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(40, y, f"Comprobante de compra #{compra.id_compra}")
+    y -= 18
+    c.setFont("Helvetica", 10)
+    c.drawString(40, y, f"Fecha: {_format_fecha_local(compra.fecha)}")
+    y -= 14
+    proveedor_nombre = compra.proveedor.nombre if compra.proveedor else "-"
+    c.drawString(40, y, f"Proveedor: {proveedor_nombre}")
+    y -= 20
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(40, y, "Producto")
+    c.drawString(260, y, "Cantidad")
+    c.drawString(340, y, "Precio")
+    c.drawString(420, y, "Subtotal")
+    y -= 12
+    c.setFont("Helvetica", 9)
+
+    for det in compra.detalles:
+        if y < 80:
+            c.showPage()
+            y = height - 40
+        nombre = det.producto.nombre if det.producto else f"#{det.id_producto}"
+        c.drawString(40, y, nombre[:32])
+        c.drawString(260, y, str(det.cantidad))
+        c.drawString(340, y, f"Bs {float(det.precio_unitario or 0):.2f}")
+        c.drawString(420, y, f"Bs {float(det.subtotal or 0):.2f}")
+        y -= 12
+
+    y -= 8
+    c.setFont("Helvetica-Bold", 10)
+    c.drawRightString(520, y, f"Total: Bs {float(compra.total or 0):.2f}")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"compra_{compra.id_compra}.pdf", mimetype="application/pdf")
+

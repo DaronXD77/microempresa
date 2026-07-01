@@ -1,192 +1,244 @@
-import React, { useState } from "react";
-import { createVenta, fetchQrVenta } from "../controllers/ventaController";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { fetchPublicProductoDetalle } from "../controllers/productoController";
+import { addToCart, getCart } from "../utils/cartStorage";
+import ToastModal from "./ToastModal";
+import { resolveAssetUrl } from "../utils/url";
 
-const PortalProductoDetalle = ({ producto, onBack, onVentaCreada }) => {
-  const [tallaSeleccionada, setTallaSeleccionada] = useState(null);
-  const [cantidad, setCantidad] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showQr, setShowQr] = useState(false);
-  const [qrData, setQrData] = useState(null);
+const PortalProductoDetalle = () => {
+  const { productoId } = useParams();
+  const navigate = useNavigate();
+  const [producto, setProducto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [toast, setToast] = useState({ open: false, message: "", variant: "success" });
+  const [cartCount, setCartCount] = useState(0);
+  const [showCartFloat, setShowCartFloat] = useState(false);
+  const cartTimerRef = useRef(null);
 
-  const tallasDisponibles = producto.tallas?.filter((t) => t.stock > 0) || [];
+  useEffect(() => {
+    let active = true;
 
-  const getImageUrl = () => {
-    if (producto.imagenes && producto.imagenes.length > 0) {
-      return producto.imagenes[0].url;
-    }
-    return "https://via.placeholder.com/400x300?text=Sin+Imagen";
-  };
-
-  const handleComprar = async () => {
-    if (producto.es_textil && !tallaSeleccionada) {
-      setError("Selecciona una talla");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const detalles = [
-        {
-          id_producto_talla: producto.es_textil
-            ? tallasDisponibles.find((t) => t.id_talla === parseInt(tallaSeleccionada))?.id_producto_talla
-            : producto.tallas?.[0]?.id_producto_talla,
-          cantidad: cantidad,
-          precio_unitario: producto.precio_venta,
-          descuento: 0,
-        },
-      ];
-
-      const { response, data } = await createVenta({
-        tipo_venta: "virtual",
-        tipo_comprador: "normal",
-        detalles,
-      });
-
+    const load = async () => {
+      setLoading(true);
+      setMessage("");
+      const { response, data } = await fetchPublicProductoDetalle(productoId);
+      if (!active) return;
       if (!response.ok) {
-        setError(data.error || "Error al crear venta");
+        setMessage(data.error || "No se pudo cargar el producto.");
+        setLoading(false);
         return;
       }
-
-      const qrRes = await fetchQrVenta(data.venta.id_venta);
-      if (qrRes.response.ok) {
-        setQrData(qrRes.data);
-      }
-
-      setShowQr(true);
-      onVentaCreada && onVentaCreada(data);
-    } catch (err) {
-      setError("Error de conexion");
-    } finally {
+      setProducto(data.producto || null);
       setLoading(false);
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [productoId]);
+
+  const images = useMemo(() => {
+    const fotos = producto?.fotos || [];
+    if (fotos.length > 0) return fotos.map((foto) => resolveAssetUrl(foto.url)).filter(Boolean);
+    if (producto?.microempresa?.logo_url) return [resolveAssetUrl(producto.microempresa.logo_url)];
+    return [];
+  }, [producto]);
+
+  const imageUrl = images[activeIndex] || "";
+  const categorias = (producto?.categorias || []).map((cat) => cat.nombre).filter(Boolean);
+  const stockValue = Number(producto?.stock ?? 0);
+  const isOutOfStock = Number.isFinite(stockValue) && stockValue <= 0;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [productoId]);
+
+  useEffect(() => () => {
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      const cart = getCart();
+      const count = cart?.items?.reduce((sum, item) => sum + item.cantidad, 0) || 0;
+      setCartCount(count);
+    };
+    update();
+    window.addEventListener("storage", update);
+    window.addEventListener("cartUpdated", update);
+    return () => {
+      window.removeEventListener("storage", update);
+      window.removeEventListener("cartUpdated", update);
+    };
+  }, []);
+
+  const goPrev = () => {
+    if (!images.length) return;
+    setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goNext = () => {
+    if (!images.length) return;
+    setActiveIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const handleAddToCart = (redirect) => {
+    if (!producto) return;
+    const result = addToCart(producto, 1);
+    if (result.error) {
+      setToast({ open: true, message: result.error, variant: "warning" });
+      return;
+    }
+    setToast({ open: true, message: "Producto agregado al carrito.", variant: "success" });
+    setShowCartFloat(true);
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+    }
+    cartTimerRef.current = setTimeout(() => setShowCartFloat(false), 3500);
+    if (redirect) {
+      navigate("/portal/carrito");
     }
   };
 
   return (
-    <div className="container">
-      <button onClick={onBack} className="btn btn-secondary mb-4">
-        &larr; Volver a productos
-      </button>
-
-      <div className="card" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-        <div>
-          <img
-            src={getImageUrl()}
-            alt={producto.nombre}
-            style={{ width: "100%", borderRadius: "8px" }}
-            onError={(e) => {
-              e.target.src = "https://via.placeholder.com/400x300?text=Sin+Imagen";
-            }}
-          />
-        </div>
-
-        <div>
-          <h1 style={{ fontSize: "28px", marginBottom: "8px" }}>{producto.nombre}</h1>
-          
-          {producto.categoria && (
-            <span className="badge badge-info mb-4">{producto.categoria.nombre}</span>
-          )}
-
-          <div style={{ fontSize: "32px", fontWeight: "bold", color: "#1976d2", marginBottom: "16px" }}>
-            Bs. {producto.precio_venta.toFixed(2)}
+    <div className="portal-page">
+      <div className="portal-container">
+        <header className="portal-header detail-header">
+          <Link to="/" className="portal-back" onClick={(e) => {
+            e.preventDefault();
+            navigate(-1);
+          }}>
+            Volver
+          </Link>
+          <div className="portal-brand">Sistema SaaS</div>
+          <div className="portal-icons">
+            <Link to="/portal/carrito" className="portal-icon cart-icon" aria-label="Carrito">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="5" y="7" width="14" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M9 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+              {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+            </Link>
           </div>
+        </header>
 
-          {producto.descripcion && (
-            <p style={{ marginBottom: "16px", color: "#555" }}>{producto.descripcion}</p>
-          )}
+        <div className="portal-breadcrumb">Inicio / Producto</div>
 
-          {producto.es_textil && (
-            <div className="form-group">
-              <label>Talla</label>
-              <div className="flex gap-2 flex-wrap">
-                {tallasDisponibles.map((t) => (
-                  <button
-                    key={t.id_talla}
-                    onClick={() => setTallaSeleccionada(t.id_talla)}
-                    className={`btn ${tallaSeleccionada == t.id_talla ? "btn-primary" : "btn-secondary"}`}
+        <div className="product-detail">
+          {loading ? (
+            <p className="muted">Cargando...</p>
+          ) : message ? (
+            <p className="error">{message}</p>
+          ) : producto ? (
+            <div className="product-detail-grid">
+              <div className="product-detail-media">
+                <div className="product-carousel">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={producto.nombre} />
+                  ) : (
+                    <div className="product-placeholder">Sin imagen</div>
+                  )}
+                  {images.length > 1 && (
+                    <>
+                      <button type="button" className="carousel-arrow left" onClick={goPrev}>
+                        ‹
+                      </button>
+                      <button type="button" className="carousel-arrow right" onClick={goNext}>
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
+                {images.length > 1 && (
+                  <div className="product-thumbs">
+                    {images.map((url, index) => (
+                      <button
+                        key={url}
+                        type="button"
+                        className={index === activeIndex ? "thumb active" : "thumb"}
+                        onClick={() => setActiveIndex(index)}
+                      >
+                        <img src={url} alt={producto.nombre} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="product-detail-info">
+                <div className="detail-label">Producto</div>
+                <h2>{producto.nombre}</h2>
+                <div className="detail-price">Bs {producto.precio_unitario}</div>
+
+                {producto.microempresa?.nombre && (
+                  <Link
+                    to={`/microempresa/${producto.microempresa.tenant_id}`}
+                    className="detail-brand"
                   >
-                    {t.talla?.nombre || "Talla"}
-                    <span style={{ marginLeft: "4px", fontSize: "12px" }}>
-                      ({t.stock})
-                    </span>
+                    {producto.microempresa.logo_url && (
+                      <img
+                        src={resolveAssetUrl(producto.microempresa.logo_url)}
+                        alt={producto.microempresa.nombre}
+                      />
+                    )}
+                    <span>{producto.microempresa.nombre}</span>
+                  </Link>
+                )}
+
+                {producto.descripcion && <p className="detail-desc">{producto.descripcion}</p>}
+
+                <div className="detail-meta">
+                  <div>
+                    <span className="detail-label">Categorias</span>
+                    <p>{categorias.length ? categorias.join(", ") : "Sin categoria"}</p>
+                  </div>
+                  <div>
+                    <span className="detail-label">Stock</span>
+                    <p>{producto.stock}</p>
+                    {isOutOfStock && <span className="muted">Agotado</span>}
+                  </div>
+                </div>
+
+                <div className="detail-actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => handleAddToCart(false)}
+                    disabled={isOutOfStock}
+                  >
+                    Agregar al carrito
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => handleAddToCart(true)}
+                    disabled={isOutOfStock}
+                  >
+                    Comprar ahora
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-
-          <div className="form-group">
-            <label>Cantidad</label>
-            <input
-              type="number"
-              min="1"
-              max={tallaSeleccionada
-                ? tallasDisponibles.find((t) => t.id_talla === parseInt(tallaSeleccionada))?.stock
-                : producto.tallas?.[0]?.stock || 10
-              }
-              value={cantidad}
-              onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
-              style={{ width: "100px" }}
-            />
-          </div>
-
-          {error && <p className="error mb-4">{error}</p>}
-
-          <button
-            onClick={handleComprar}
-            className="btn btn-primary"
-            disabled={loading || (producto.es_textil && !tallaSeleccionada)}
-            style={{ width: "100%", padding: "14px", fontSize: "16px" }}
-          >
-            {loading ? "Procesando..." : "Comprar ahora"}
-          </button>
+          ) : null}
         </div>
       </div>
-
-      {showQr && qrData && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowQr(false)}
-        >
-          <div
-            className="card"
-            style={{ textAlign: "center", maxWidth: "400px", width: "90%" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ marginBottom: "16px" }}>Pago por QR</h2>
-            <p style={{ marginBottom: "16px" }}>
-              Monto: <strong>Bs. {qrData.monto.toFixed(2)}</strong>
-            </p>
-            <img
-              src={`data:image/png;base64,${qrData.qr}`}
-              alt="QR de pago"
-              style={{ width: "200px", height: "200px", margin: "0 auto" }}
-            />
-            <p style={{ marginTop: "16px", fontSize: "14px", color: "#666" }}>
-              Referencia: {qrData.referencia}
-            </p>
-            <button
-              onClick={() => setShowQr(false)}
-              className="btn btn-primary mt-4"
-              style={{ width: "100%" }}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
+      <ToastModal
+        open={toast.open}
+        message={toast.message}
+        variant={toast.variant}
+        duration={10000}
+        onClose={() => setToast({ open: false, message: "", variant: "success" })}
+      />
+      {showCartFloat && cartCount > 0 && (
+        <Link to="/portal/carrito" className="cart-float" aria-label="Ver carrito">
+          <span>Carrito</span>
+          <span className="cart-float-count">{cartCount}</span>
+        </Link>
       )}
     </div>
   );
