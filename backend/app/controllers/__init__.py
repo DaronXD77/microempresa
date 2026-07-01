@@ -2,7 +2,6 @@
 Controladores del sistema
 """
 from .auth import auth_bp
-from .auth_controller import auth_bp
 from .producto_controller import producto_bp
 from .venta_controller import venta_bp
 from .compra_controller import compra_bp
