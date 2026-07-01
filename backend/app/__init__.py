@@ -158,6 +158,12 @@ def create_app():
                         text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS password TEXT")
                     )
                     db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS temp_password TEXT")
+                    )
+                    db.session.execute(
+                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS temp_password_set_at TIMESTAMP")
+                    )
+                    db.session.execute(
                         text(
                             "DO $$ BEGIN "
                             "IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cliente' AND column_name = 'password_hash') THEN "
@@ -184,12 +190,6 @@ def create_app():
                     )
                     db.session.execute(
                         text("ALTER TABLE proveedor ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'activo'")
-                    )
-                    db.session.execute(
-                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS temp_password TEXT")
-                    )
-                    db.session.execute(
-                        text("ALTER TABLE cliente ADD COLUMN IF NOT EXISTS temp_password_set_at TIMESTAMP")
                     )
                     db.session.execute(
                         text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL")
@@ -260,6 +260,14 @@ def create_app():
                         db.session.execute(
                             text("ALTER TABLE cliente ADD COLUMN password TEXT")
                         )
+                    if "temp_password" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN temp_password TEXT")
+                        )
+                    if "temp_password_set_at" not in columns_cliente:
+                        db.session.execute(
+                            text("ALTER TABLE cliente ADD COLUMN temp_password_set_at DATETIME")
+                        )
                     if "password_hash" in columns_cliente:
                         db.session.execute(text("UPDATE cliente SET password = password_hash WHERE password IS NULL"))
                     info_proveedor = db.session.execute(text("PRAGMA table_info(proveedor)")).fetchall()
@@ -274,14 +282,6 @@ def create_app():
                         db.session.execute(text("ALTER TABLE proveedor ADD COLUMN password TEXT"))
                     if "estado" not in columns_proveedor:
                         db.session.execute(text("ALTER TABLE proveedor ADD COLUMN estado TEXT DEFAULT 'activo'"))
-                    if "temp_password" not in columns_cliente:
-                        db.session.execute(
-                            text("ALTER TABLE cliente ADD COLUMN temp_password TEXT")
-                        )
-                    if "temp_password_set_at" not in columns_cliente:
-                        db.session.execute(
-                            text("ALTER TABLE cliente ADD COLUMN temp_password_set_at DATETIME")
-                        )
                     db.session.execute(text("UPDATE cliente SET apellido_paterno = '-' WHERE apellido_paterno IS NULL"))
                     db.session.execute(text("UPDATE cliente SET es_generico = 0 WHERE es_generico IS NULL"))
                     info_producto = db.session.execute(text("PRAGMA table_info(producto)")).fetchall()
