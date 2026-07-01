@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
-from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import Proveedor, db
 from ..services.auth_service import get_current_role, has_permission
@@ -67,12 +66,8 @@ def create_proveedor():
         email=email or None,
         estado=estado,
     )
-    try:
-        db.session.add(proveedor)
-        db.session.commit()
-    except SQLAlchemyError as exc:
-        db.session.rollback()
-        return jsonify({"error": f"No se pudo crear el proveedor: {exc.__class__.__name__}"}), 500
+    db.session.add(proveedor)
+    db.session.commit()
     return jsonify({"proveedor": proveedor.to_dict()}), 201
 
 
